@@ -526,13 +526,44 @@ async def handle_issue_event(
     # Trigger appropriate workflow
     if workflow_type == "chore":
         logger.info(f"🚀 Starting chore workflow for issue #{issue.number}")
-        result = await trigger_chore_workflow(
-            prompt=prompt,
-            adw_id=adw_id,
-            model=model,
-            working_dir=working_dir,
-        )
-        logger.info(f"✓ Chore workflow completed: success={result.success}, plan_path={result.plan_path}")
+
+        try:
+            result = await trigger_chore_workflow(
+                prompt=prompt,
+                adw_id=adw_id,
+                model=model,
+                working_dir=working_dir,
+            )
+            logger.info(f"✓ Chore workflow completed: success={result.success}, plan_path={result.plan_path}")
+        except Exception as e:
+            logger.error(f"💥 Exception during chore workflow: {e}", exc_info=True)
+
+            # Post error comment to issue
+            import traceback
+            error_details = str(e)
+            error_type = type(e).__name__
+
+            comment_posted = post_workflow_comment(
+                issue.number,
+                repo_full_name,
+                f"💥 **Workflow Error**\n\n"
+                f"**ADW ID:** `{adw_id}`\n"
+                f"**Error Type:** `{error_type}`\n\n"
+                f"```\n{error_details}\n```\n\n"
+                f"The workflow encountered an unexpected error. Check server logs for details.\n\n"
+                f"**Logs location:** `agents/{adw_id}/planner/`"
+            )
+            logger.info(f"   Error comment posted: {comment_posted}")
+
+            return {
+                "workflow_triggered": True,
+                "workflow_type": "chore",
+                "issue_number": issue.number,
+                "adw_id": adw_id,
+                "success": False,
+                "error": error_details,
+                "error_type": error_type,
+            }
 
         # Post completion comment
         logger.info(f"📝 Posting chore completion comment to issue #{issue.number}")
@@ -576,17 +607,47 @@ async def handle_issue_event(
         repo_owner = repo_parts[0] if len(repo_parts) > 0 else None
         repo_name = repo_parts[1] if len(repo_parts) > 1 else None
 
-        chore_result, impl_result = await trigger_chore_implement_workflow(
-            prompt=prompt,
-            adw_id=adw_id,
-            model=model,
-            working_dir=working_dir,
-            issue_number=issue.number,
-            repo_owner=repo_owner,
-            repo_name=repo_name,
-            issue_title=issue.title,
-        )
-        logger.info(f"✓ Chore_implement workflow completed: chore_success={chore_result.success}, impl_success={impl_result.success if impl_result else None}")
+        try:
+            chore_result, impl_result = await trigger_chore_implement_workflow(
+                prompt=prompt,
+                adw_id=adw_id,
+                model=model,
+                working_dir=working_dir,
+                issue_number=issue.number,
+                repo_owner=repo_owner,
+                repo_name=repo_name,
+                issue_title=issue.title,
+            )
+            logger.info(f"✓ Chore_implement workflow completed: chore_success={chore_result.success}, impl_success={impl_result.success if impl_result else None}")
+        except Exception as e:
+            logger.error(f"💥 Exception during chore_implement workflow: {e}", exc_info=True)
+
+            # Post error comment to issue
+            import traceback
+            error_details = str(e)
+            error_type = type(e).__name__
+
+            comment_posted = post_workflow_comment(
+                issue.number,
+                repo_full_name,
+                f"💥 **Workflow Error**\n\n"
+                f"**ADW ID:** `{adw_id}`\n"
+                f"**Error Type:** `{error_type}`\n\n"
+                f"```\n{error_details}\n```\n\n"
+                f"The workflow encountered an unexpected error. Check server logs for details.\n\n"
+                f"**Logs location:** `agents/{adw_id}/`"
+            )
+            logger.info(f"   Error comment posted: {comment_posted}")
+
+            return {
+                "workflow_triggered": True,
+                "workflow_type": "chore_implement",
+                "issue_number": issue.number,
+                "adw_id": adw_id,
+                "success": False,
+                "error": error_details,
+                "error_type": error_type,
+            }
 
         # Post completion comment based on results
         logger.info(f"📝 Posting chore_implement completion comment to issue #{issue.number}")
