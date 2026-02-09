@@ -266,18 +266,27 @@ async def trigger_chore_implement_workflow(
     adw_id: Optional[str] = None,
     model: Literal["sonnet", "opus"] = "sonnet",
     working_dir: Optional[str] = None,
+    issue_number: Optional[int] = None,
+    repo_owner: Optional[str] = None,
+    repo_name: Optional[str] = None,
+    issue_title: Optional[str] = None,
 ) -> tuple[WorkflowResult, Optional[WorkflowResult]]:
     """Trigger a full chore + implement workflow.
 
     This executes both planning and implementation in sequence:
     1. Runs /chore to create a plan
     2. If planning succeeds, runs /implement to execute the plan
+    3. If git info provided, creates branch, commits, pushes, and creates PR
 
     Args:
         prompt: Description of the work to be planned and implemented
         adw_id: Unique identifier for this workflow (generated if not provided)
         model: Claude model to use (sonnet or opus)
         working_dir: Working directory for workflow execution (default: current dir)
+        issue_number: GitHub issue number (for PR linking)
+        repo_owner: Repository owner (for git operations)
+        repo_name: Repository name (for git operations)
+        issue_title: Issue title (for branch naming)
 
     Returns:
         Tuple of (chore_result, implement_result)
@@ -285,7 +294,11 @@ async def trigger_chore_implement_workflow(
 
     Example:
         chore_result, impl_result = await trigger_chore_implement_workflow(
-            prompt="Add rate limiting to webhook endpoint"
+            prompt="Add rate limiting to webhook endpoint",
+            issue_number=42,
+            repo_owner="myorg",
+            repo_name="myrepo",
+            issue_title="Add rate limiting"
         )
         if chore_result.success and impl_result and impl_result.success:
             print("Full workflow completed successfully")
@@ -300,8 +313,33 @@ async def trigger_chore_implement_workflow(
 
     logger.info(
         f"Triggering /chore + /implement workflow: adw_id={adw_id}, "
-        f"model={model}, working_dir={working_dir}"
+        f"model={model}, working_dir={working_dir}, issue_number={issue_number}"
     )
+
+    # Create branch if git info provided
+    branch_name = None
+    if issue_number and repo_owner and repo_name:
+        from git_ops import create_branch
+
+        # Generate branch name from issue number and title
+        if issue_title:
+            # Sanitize title for branch name
+            sanitized_title = issue_title.lower()
+            sanitized_title = sanitized_title.replace(" ", "-")
+            # Remove special characters except hyphens
+            sanitized_title = "".join(c for c in sanitized_title if c.isalnum() or c == "-")
+            # Limit length
+            sanitized_title = sanitized_title[:50]
+            branch_name = f"issue-{issue_number}-{sanitized_title}"
+        else:
+            branch_name = f"issue-{issue_number}"
+
+        logger.info(f"Creating branch: {branch_name}")
+        if create_branch(branch_name, working_dir):
+            logger.info(f"✓ Branch created: {branch_name}")
+        else:
+            logger.warning(f"⚠️ Failed to create branch {branch_name}, continuing anyway")
+            branch_name = None
 
     # Phase 1: Run chore workflow
     chore_result = await trigger_chore_workflow(
@@ -331,11 +369,68 @@ async def trigger_chore_implement_workflow(
         working_dir=working_dir,
     )
 
+    # Phase 3: Commit, push, and create PR if git info provided
+    pr_url = None
+    if implement_result.success and branch_name and repo_owner and repo_name:
+        from git_ops import commit_changes, push_branch, create_pull_request
+
+        logger.info("Starting git operations...")
+
+        # Commit changes
+        commit_message = f"Implement issue #{issue_number}: {issue_title}\n\nADW ID: {adw_id}"
+        logger.info(f"Committing changes: {commit_message[:100]}...")
+        if commit_changes(commit_message, working_dir, logger):
+            logger.info("✓ Changes committed")
+
+            # Push branch
+            logger.info(f"Pushing branch {branch_name}...")
+            if push_branch(branch_name, working_dir, logger):
+                logger.info("✓ Branch pushed")
+
+                # Create PR
+                pr_title = f"{issue_title} (#{issue_number})"
+                pr_body = (
+                    f"Closes #{issue_number}\n\n"
+                    f"## Summary\n\n"
+                    f"{prompt}\n\n"
+                    f"## ADW Info\n\n"
+                    f"- **ADW ID:** `{adw_id}`\n"
+                    f"- **Plan:** `{chore_result.plan_path}`\n"
+                    f"- **Model:** `{model}`\n\n"
+                    f"🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+                )
+
+                logger.info(f"Creating pull request...")
+                pr_url = create_pull_request(
+                    title=pr_title,
+                    body=pr_body,
+                    branch_name=branch_name,
+                    issue_number=issue_number,
+                    working_dir=working_dir,
+                    repo_owner=repo_owner,
+                    repo_name=repo_name,
+                    logger=logger,
+                )
+
+                if pr_url:
+                    logger.info(f"✓ Pull request created: {pr_url}")
+                else:
+                    logger.warning("⚠️ Failed to create pull request")
+            else:
+                logger.warning("⚠️ Failed to push branch")
+        else:
+            logger.warning("⚠️ Failed to commit changes (may be no changes to commit)")
+
     logger.info(
         f"Full workflow completed: adw_id={adw_id}, "
         f"chore_success={chore_result.success}, "
-        f"implement_success={implement_result.success}"
+        f"implement_success={implement_result.success}, "
+        f"pr_created={pr_url is not None}"
     )
+
+    # Store PR URL in implement_result if available
+    if pr_url and implement_result:
+        implement_result.output = f"{implement_result.output}\n\n🔗 Pull Request: {pr_url}"
 
     return chore_result, implement_result
 

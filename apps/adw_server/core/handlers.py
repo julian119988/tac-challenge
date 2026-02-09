@@ -570,26 +570,53 @@ async def handle_issue_event(
 
     elif workflow_type == "chore_implement":
         logger.info(f"🚀 Starting chore_implement workflow for issue #{issue.number}")
+
+        # Extract repo owner and name from full_name (e.g., "owner/repo")
+        repo_parts = repo_full_name.split("/")
+        repo_owner = repo_parts[0] if len(repo_parts) > 0 else None
+        repo_name = repo_parts[1] if len(repo_parts) > 1 else None
+
         chore_result, impl_result = await trigger_chore_implement_workflow(
             prompt=prompt,
             adw_id=adw_id,
             model=model,
             working_dir=working_dir,
+            issue_number=issue.number,
+            repo_owner=repo_owner,
+            repo_name=repo_name,
+            issue_title=issue.title,
         )
         logger.info(f"✓ Chore_implement workflow completed: chore_success={chore_result.success}, impl_success={impl_result.success if impl_result else None}")
 
         # Post completion comment based on results
         logger.info(f"📝 Posting chore_implement completion comment to issue #{issue.number}")
         if chore_result.success and impl_result and impl_result.success:
-            comment_posted = post_workflow_comment(
-                issue.number,
-                repo_full_name,
+            # Check if PR URL is in output
+            pr_url = None
+            if impl_result.output and "Pull Request:" in impl_result.output:
+                import re
+                match = re.search(r"Pull Request: (https://[^\s]+)", impl_result.output)
+                if match:
+                    pr_url = match.group(1)
+
+            comment_text = (
                 f"✅ **Full Workflow Complete**\n\n"
                 f"**ADW ID:** `{adw_id}`\n"
                 f"**Plan:** `{chore_result.plan_path}`\n\n"
                 f"✓ Planning completed\n"
-                f"✓ Implementation completed\n\n"
-                f"The issue has been automatically planned and implemented. Please review the changes."
+                f"✓ Implementation completed\n"
+            )
+
+            if pr_url:
+                comment_text += f"✓ Pull request created: {pr_url}\n\n"
+                comment_text += f"Please review the PR and merge when ready."
+            else:
+                comment_text += f"\n⚠️ Note: PR creation was not attempted or failed. Please review the changes manually."
+
+            comment_posted = post_workflow_comment(
+                issue.number,
+                repo_full_name,
+                comment_text
             )
             logger.info(f"   Success comment posted: {comment_posted}")
         elif chore_result.success and (not impl_result or not impl_result.success):
