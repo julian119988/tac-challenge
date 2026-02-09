@@ -5,7 +5,11 @@ import os
 import subprocess
 from typing import Dict, List, Optional
 
-from .data_types import GitHubIssue, GitHubComment
+# Try relative import first (for adw scripts), fall back to absolute import (for webhook server)
+try:
+    from .data_types import GitHubIssue, GitHubComment
+except ImportError:
+    from data_types import GitHubIssue, GitHubComment
 
 # Bot identifier to prevent webhook loops
 ADW_BOT_IDENTIFIER = "[ADW-AGENTS]"
