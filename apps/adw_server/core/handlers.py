@@ -660,19 +660,35 @@ async def handle_issue_event(
                 if match:
                     pr_url = match.group(1)
 
-            comment_text = (
-                f"✅ **Full Workflow Complete**\n\n"
-                f"**ADW ID:** `{adw_id}`\n"
-                f"**Plan:** `{chore_result.plan_path}`\n\n"
-                f"✓ Planning completed\n"
-                f"✓ Implementation completed\n"
-            )
-
             if pr_url:
-                comment_text += f"✓ Pull request created: {pr_url}\n\n"
-                comment_text += f"Please review the PR and merge when ready."
+                comment_text = (
+                    f"✅ **Full Workflow Complete**\n\n"
+                    f"Successfully implemented: **{issue.title}**\n\n"
+                    f"## Pull Request Created\n"
+                    f"🔗 {pr_url}\n\n"
+                    f"## Summary\n"
+                    f"✓ Planning completed\n"
+                    f"✓ Implementation completed\n"
+                    f"✓ Pull request created\n\n"
+                    f"## Details\n"
+                    f"- **ADW ID:** `{adw_id}`\n"
+                    f"- **Plan:** `{chore_result.plan_path}`\n"
+                    f"- **Model:** `{model}`\n\n"
+                    f"**Next Steps:** Please review the pull request and merge when ready."
+                )
             else:
-                comment_text += f"\n⚠️ Note: PR creation was not attempted or failed. Please review the changes manually."
+                comment_text = (
+                    f"✅ **Full Workflow Complete**\n\n"
+                    f"Successfully implemented: **{issue.title}**\n\n"
+                    f"## Summary\n"
+                    f"✓ Planning completed\n"
+                    f"✓ Implementation completed\n\n"
+                    f"## Details\n"
+                    f"- **ADW ID:** `{adw_id}`\n"
+                    f"- **Plan:** `{chore_result.plan_path}`\n"
+                    f"- **Model:** `{model}`\n\n"
+                    f"⚠️ **Note:** PR creation was not attempted or failed. Please review the changes manually."
+                )
 
             comment_posted = post_workflow_comment(
                 issue.number,
