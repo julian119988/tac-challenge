@@ -115,7 +115,8 @@ class DistractionMonitor {
     this.currentState = 'not-started'; // 'focused', 'distracted', 'intervention', 'not-started'
     this.lastFaceDetectedTime = Date.now();
     this.lastLookingAtScreenTime = Date.now();
-    this.detectionIntervalId = null;
+    this.animationFrameId = null;
+    this.videoElement = null;
 
     // Stats
     this.sessionStartTime = null;
@@ -133,25 +134,46 @@ class DistractionMonitor {
     this.lastFaceDetectedTime = Date.now();
     this.lastLookingAtScreenTime = Date.now();
     this.currentState = 'focused';
+    this.videoElement = videoElement;
 
-    // Run face detection at configured interval
-    this.detectionIntervalId = setInterval(async () => {
-      await this.checkDistraction(videoElement);
-    }, CONFIG.detection.detectionInterval);
+    // Start continuous detection using requestAnimationFrame
+    this.startContinuousDetection();
 
-    console.log('Distraction monitoring started');
+    console.log('Distraction monitoring started (realtime detection)');
   }
 
   /**
    * Stop monitoring
    */
   stop() {
-    if (this.detectionIntervalId) {
-      clearInterval(this.detectionIntervalId);
-      this.detectionIntervalId = null;
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
+    this.videoElement = null;
     this.currentState = 'not-started';
     console.log('Distraction monitoring stopped');
+  }
+
+  /**
+   * Start continuous detection loop using requestAnimationFrame
+   */
+  startContinuousDetection() {
+    const detectLoop = async () => {
+      // Only continue if monitoring is active
+      if (this.currentState === 'not-started' || !this.videoElement) {
+        return;
+      }
+
+      // Perform detection
+      await this.checkDistraction(this.videoElement);
+
+      // Schedule next frame
+      this.animationFrameId = requestAnimationFrame(detectLoop);
+    };
+
+    // Start the loop
+    this.animationFrameId = requestAnimationFrame(detectLoop);
   }
 
   /**
@@ -216,10 +238,10 @@ class DistractionMonitor {
    * Handle focus restored
    */
   onFocusRestored() {
-    console.log('Focus restored');
+    console.log('Focus restored - auto-closing intervention video');
     this.currentState = 'focused';
 
-    // Stop intervention video if playing
+    // Stop intervention video if playing (auto-close)
     this.attentionPlayer.stop();
 
     // Dispatch event

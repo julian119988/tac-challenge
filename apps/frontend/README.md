@@ -66,8 +66,9 @@ The app detects distraction using the following criteria:
 
 When distraction is detected:
 - An attention-grabbing video plays in fullscreen overlay
-- You can close it by clicking the X button or pressing ESC
-- The app continues monitoring after you close the video
+- You can close it manually by clicking the X button or pressing ESC
+- The video automatically closes when you return your attention to the screen
+- The app continues monitoring in realtime throughout your session
 
 ### Statistics Tracked
 
@@ -87,7 +88,7 @@ export const CONFIG = {
     noFaceTimeout: 3000,        // ms before distraction when no face
     gazeAwayTimeout: 4000,      // ms before distraction when looking away
     headTurnThreshold: 30,      // degrees for head turn detection
-    detectionInterval: 200,     // ms between face detection checks (5 FPS)
+    detectionInterval: 200,     // DEPRECATED - detection now runs continuously in realtime
   },
 
   videos: [
@@ -175,8 +176,9 @@ Manages intervention video playback with fullscreen overlay.
 - Extreme head angles may lose tracking
 
 ### Performance
-- Face detection runs at ~5 FPS to balance accuracy and performance
-- Older devices may experience lag
+- Face detection runs continuously in realtime using requestAnimationFrame (~60 FPS on most devices)
+- Detection is synchronized with the browser's render cycle for optimal performance
+- Older devices may experience lag due to the continuous detection
 - Close other intensive browser tabs for best performance
 
 ### Browser Quirks
