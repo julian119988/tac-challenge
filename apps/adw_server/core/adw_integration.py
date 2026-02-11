@@ -253,6 +253,150 @@ async def trigger_implement_workflow(
         )
 
 
+def generate_pr_body(
+    issue_number: int,
+    prompt: str,
+    adw_id: str,
+    plan_path: str,
+    model: str,
+    working_dir: str,
+    logger: Optional[logging.Logger] = None,
+) -> str:
+    """Generate an enhanced PR body with code changes summary.
+
+    Args:
+        issue_number: GitHub issue number
+        prompt: Original issue prompt/description
+        adw_id: ADW workflow ID
+        plan_path: Path to the plan file
+        model: Model used for generation
+        working_dir: Working directory
+        logger: Optional logger
+
+    Returns:
+        Formatted PR body string
+    """
+    import subprocess
+
+    # Start with the basic structure
+    pr_body_parts = [f"Closes #{issue_number}\n"]
+
+    # Add Summary section
+    pr_body_parts.append("## Summary\n")
+
+    # Try to extract summary from plan file
+    plan_summary = None
+    try:
+        if os.path.exists(plan_path):
+            with open(plan_path, 'r', encoding='utf-8') as f:
+                plan_content = f.read()
+
+            # Look for the description section in the plan
+            if "## Chore Description" in plan_content or "## Feature Description" in plan_content or "## Bug Description" in plan_content:
+                # Extract the description section
+                lines = plan_content.split('\n')
+                in_description = False
+                description_lines = []
+
+                for line in lines:
+                    if "## Chore Description" in line or "## Feature Description" in line or "## Bug Description" in line:
+                        in_description = True
+                        continue
+                    elif in_description and line.startswith("## "):
+                        break
+                    elif in_description and line.strip():
+                        description_lines.append(line.strip())
+
+                if description_lines:
+                    plan_summary = '\n'.join(description_lines[:3])  # Take first 3 lines
+    except Exception as e:
+        if logger:
+            logger.debug(f"Could not extract plan summary: {e}")
+
+    # Use plan summary if available, otherwise use the prompt
+    if plan_summary:
+        pr_body_parts.append(f"{plan_summary}\n")
+    else:
+        pr_body_parts.append(f"{prompt}\n")
+
+    # Add Changes section with git diff stat
+    pr_body_parts.append("## Changes\n")
+
+    try:
+        # Run git diff --stat to get summary of changes
+        result = subprocess.run(
+            ["git", "diff", "--stat", "HEAD~1"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            # Parse git diff stat output
+            diff_lines = result.stdout.strip().split('\n')
+            if diff_lines:
+                pr_body_parts.append("Files modified:\n")
+                for line in diff_lines[:-1]:  # Skip the summary line
+                    if '|' in line:
+                        file_part = line.split('|')[0].strip()
+                        pr_body_parts.append(f"- `{file_part}`\n")
+
+                # Add the summary line if available
+                if len(diff_lines) > 1:
+                    summary_line = diff_lines[-1].strip()
+                    pr_body_parts.append(f"\n{summary_line}\n")
+        else:
+            # Fallback: try to read from plan file what was changed
+            if os.path.exists(plan_path):
+                try:
+                    with open(plan_path, 'r', encoding='utf-8') as f:
+                        plan_content = f.read()
+
+                    # Look for "Relevant Files" section
+                    if "## Relevant Files" in plan_content:
+                        lines = plan_content.split('\n')
+                        in_files = False
+                        file_lines = []
+
+                        for line in lines:
+                            if "## Relevant Files" in line:
+                                in_files = True
+                                continue
+                            elif in_files and line.startswith("## "):
+                                break
+                            elif in_files and line.strip().startswith("- `"):
+                                # Extract file path
+                                file_ref = line.strip()[3:].split('`')[0]
+                                file_path = file_ref.split(':')[0]
+                                file_lines.append(f"- `{file_path}`\n")
+
+                        if file_lines:
+                            pr_body_parts.append("Files planned for modification:\n")
+                            pr_body_parts.extend(file_lines[:10])  # Limit to 10 files
+                    else:
+                        pr_body_parts.append("Code changes implemented as per plan.\n")
+                except Exception as e:
+                    if logger:
+                        logger.debug(f"Could not extract files from plan: {e}")
+                    pr_body_parts.append("Code changes implemented as per plan.\n")
+            else:
+                pr_body_parts.append("Code changes implemented as per plan.\n")
+
+    except Exception as e:
+        if logger:
+            logger.debug(f"Could not get git diff: {e}")
+        pr_body_parts.append("Code changes implemented as per plan.\n")
+
+    # Add ADW Info section
+    pr_body_parts.append("\n## ADW Info\n")
+    pr_body_parts.append(f"- **ADW ID:** `{adw_id}`\n")
+    pr_body_parts.append(f"- **Plan:** `{plan_path}`\n")
+    pr_body_parts.append(f"- **Model:** `{model}`\n\n")
+    pr_body_parts.append("🤖 Generated with [Claude Code](https://claude.com/claude-code)")
+
+    return ''.join(pr_body_parts)
+
+
 async def trigger_chore_implement_workflow(
     prompt: str,
     adw_id: Optional[str] = None,
@@ -381,15 +525,14 @@ async def trigger_chore_implement_workflow(
 
                 # Create PR
                 pr_title = f"{issue_title} (#{issue_number})"
-                pr_body = (
-                    f"Closes #{issue_number}\n\n"
-                    f"## Summary\n\n"
-                    f"{prompt}\n\n"
-                    f"## ADW Info\n\n"
-                    f"- **ADW ID:** `{adw_id}`\n"
-                    f"- **Plan:** `{chore_result.plan_path}`\n"
-                    f"- **Model:** `{model}`\n\n"
-                    f"🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+                pr_body = generate_pr_body(
+                    issue_number=issue_number,
+                    prompt=prompt,
+                    adw_id=adw_id,
+                    plan_path=chore_result.plan_path,
+                    model=model,
+                    working_dir=working_dir,
+                    logger=logger,
                 )
 
                 logger.info(f"Creating pull request...")

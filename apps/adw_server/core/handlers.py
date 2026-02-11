@@ -666,6 +666,7 @@ async def handle_issue_event(
                     f"Successfully implemented: **{issue.title}**\n\n"
                     f"## Pull Request Created\n"
                     f"🔗 {pr_url}\n\n"
+                    f"The PR includes a detailed summary of code changes and files modified.\n\n"
                     f"## Summary\n"
                     f"✓ Planning completed\n"
                     f"✓ Implementation completed\n"
