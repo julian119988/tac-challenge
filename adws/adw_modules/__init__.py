@@ -4,7 +4,11 @@ __version__ = "0.1.0"
 
 # Import all core modules for easy access
 from . import agent
-from . import agent_sdk
+# agent_sdk is optional (requires claude_code_sdk)
+try:
+    from . import agent_sdk
+except ImportError:
+    agent_sdk = None
 from . import data_types
 from . import state
 from . import github

@@ -32,16 +32,8 @@ from typing import Optional, Literal
 from pathlib import Path
 from pydantic import BaseModel
 
-# Add adw_modules to path for imports
-# apps/server/core/adw_integration.py -> project_root/adws/adw_modules
-current_file = os.path.abspath(__file__)
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-adws_path = os.path.join(project_root, "adws")
-adw_modules_path = os.path.join(adws_path, "adw_modules")
-if adw_modules_path not in sys.path:
-    sys.path.insert(0, adw_modules_path)
-
-from agent import (
+# Import ADW modules using proper package paths
+from adws.adw_modules.agent import (
     AgentTemplateRequest,
     AgentPromptResponse,
     execute_template,
@@ -319,7 +311,7 @@ async def trigger_chore_implement_workflow(
     # Create branch if git info provided
     branch_name = None
     if issue_number and repo_owner and repo_name:
-        from git_ops import create_branch
+        from adws.adw_modules.git_ops import create_branch
 
         # Generate branch name from issue number and title
         if issue_title:
@@ -372,7 +364,7 @@ async def trigger_chore_implement_workflow(
     # Phase 3: Commit, push, and create PR if git info provided
     pr_url = None
     if implement_result.success and branch_name and repo_owner and repo_name:
-        from git_ops import commit_changes, push_branch, create_pull_request
+        from adws.adw_modules.git_ops import commit_changes, push_branch, create_pull_request
 
         logger.info("Starting git operations...")
 

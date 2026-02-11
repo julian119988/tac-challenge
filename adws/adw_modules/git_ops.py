@@ -4,7 +4,7 @@ import subprocess
 from typing import Optional
 import logging
 
-from github import get_github_env
+from .github import get_github_env
 
 
 def get_current_branch(working_dir: str) -> Optional[str]:
