@@ -58,7 +58,7 @@ class ServerConfig(BaseSettings):
 
     # Static files
     static_files_dir: str = Field(
-        default="apps/frontend/dist",
+        default="apps/frontend",
         description="Directory for static frontend files"
     )
 
