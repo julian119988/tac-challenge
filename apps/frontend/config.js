@@ -7,7 +7,7 @@ export const CONFIG = {
     gazeAwayTimeout: 4000, // milliseconds - time before triggering distraction when looking away
     headTurnThreshold: 30, // degrees - head turn angle threshold
     confidenceThreshold: 0.5, // minimum confidence for face detection
-    detectionInterval: 200, // milliseconds - run face detection every N ms (5 FPS)
+    detectionInterval: 200, // DEPRECATED - no longer used; detection now runs continuously via requestAnimationFrame
   },
 
   // Camera settings
