@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Keeper - Anti-Procrastination App</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- TensorFlow.js and Face Landmarks Detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1>Focus Keeper</h1>
+      <p class="tagline">Stay focused. Stay productive.</p>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+      <!-- Camera Feed -->
+      <div class="camera-section">
+        <canvas id="camera-canvas"></canvas>
+        <div id="status-indicator" class="status-indicator status-ready"></div>
+      </div>
+
+      <!-- Status Display -->
+      <div class="status-section">
+        <p id="status" class="status-text">Ready - Click Start to begin</p>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-section">
+        <button id="start-btn" class="primary-btn">Start Session</button>
+      </div>
+
+      <!-- Statistics -->
+      <div class="stats-section">
+        <h2>Session Statistics</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Session Time</div>
+            <div id="session-time" class="stat-value">00:00</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Focus Time</div>
+            <div id="focus-time" class="stat-value">00:00</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Distractions</div>
+            <div id="distraction-count" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Interventions</div>
+            <div id="intervention-count" class="stat-value">0</div>
+          </div>
+          <div class="stat-card full-width">
+            <div class="stat-label">Focus Score</div>
+            <div id="focus-percentage" class="stat-value">0.0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Display -->
+      <div id="error-message" class="error-message hidden"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        <strong>Privacy Notice:</strong> All video processing happens locally in your browser.
+        No video or images are stored or transmitted.
+      </p>
+      <p>
+        <strong>Browser Support:</strong> Works best in Chrome, Firefox, Safari, and Edge.
+        Camera permissions required.
+      </p>
+    </footer>
+  </div>
+
+  <!-- Intervention Video Container (created dynamically by video-player.js) -->
+
+  <!-- Load app modules -->
+  <script type="module" src="config.js"></script>
+  <script type="module" src="face-detection.js"></script>
+  <script type="module" src="video-player.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
