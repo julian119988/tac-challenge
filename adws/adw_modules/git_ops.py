@@ -34,17 +34,149 @@ def get_current_branch(working_dir: str) -> Optional[str]:
         return None
 
 
-def create_branch(branch_name: str, working_dir: str) -> bool:
+def ensure_main_branch_updated(
+    working_dir: str,
+    main_branch: str = "main",
+    logger: Optional[logging.Logger] = None,
+) -> tuple[bool, str]:
+    """Ensure main branch is updated from remote before creating new branches.
+
+    This function:
+    1. Checks current branch and switches to main if needed
+    2. Fetches latest changes from origin
+    3. Updates local main to match origin/main
+    4. Returns to original branch if we switched
+
+    Args:
+        working_dir: Working directory
+        main_branch: Name of main branch (default: "main")
+        logger: Optional logger
+
+    Returns:
+        Tuple of (success, error_message)
+    """
+    try:
+        # Get current branch
+        current_branch = get_current_branch(working_dir)
+        if logger:
+            logger.info(f"Current branch: {current_branch}")
+
+        # Fetch latest changes from origin
+        if logger:
+            logger.info(f"Fetching latest changes from origin/{main_branch}")
+
+        result = subprocess.run(
+            ["git", "fetch", "origin", main_branch],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode != 0:
+            error = f"Failed to fetch from origin: {result.stderr}"
+            if logger:
+                logger.error(error)
+            return False, error
+
+        # Check if we need to switch to main branch
+        need_to_switch = current_branch != main_branch
+
+        if need_to_switch:
+            if logger:
+                logger.info(f"Switching from {current_branch} to {main_branch}")
+
+            result = subprocess.run(
+                ["git", "checkout", main_branch],
+                capture_output=True,
+                text=True,
+                cwd=working_dir,
+            )
+
+            if result.returncode != 0:
+                error = f"Failed to checkout {main_branch}: {result.stderr}"
+                if logger:
+                    logger.error(error)
+                return False, error
+
+        # Update local main to match origin/main
+        if logger:
+            logger.info(f"Updating local {main_branch} to match origin/{main_branch}")
+
+        result = subprocess.run(
+            ["git", "reset", "--hard", f"origin/{main_branch}"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode != 0:
+            error = f"Failed to update {main_branch}: {result.stderr}"
+            if logger:
+                logger.error(error)
+            return False, error
+
+        # Switch back to original branch if needed
+        if need_to_switch and current_branch:
+            if logger:
+                logger.info(f"Switching back to {current_branch}")
+
+            result = subprocess.run(
+                ["git", "checkout", current_branch],
+                capture_output=True,
+                text=True,
+                cwd=working_dir,
+            )
+
+            if result.returncode != 0:
+                error = f"Failed to switch back to {current_branch}: {result.stderr}"
+                if logger:
+                    logger.error(error)
+                return False, error
+
+        if logger:
+            logger.info(f"✓ Main branch {main_branch} updated successfully")
+
+        return True, ""
+
+    except Exception as e:
+        error = f"Error ensuring main branch updated: {e}"
+        if logger:
+            logger.error(error)
+        else:
+            print(error)
+        return False, error
+
+
+def create_branch(
+    branch_name: str,
+    working_dir: str,
+    logger: Optional[logging.Logger] = None,
+    update_main: bool = True,
+    main_branch: str = "main",
+) -> bool:
     """Create and checkout a new branch.
 
     Args:
         branch_name: Branch name
         working_dir: Working directory
+        logger: Optional logger
+        update_main: Whether to update main branch before creating new branch (default: True)
+        main_branch: Name of main branch (default: "main")
 
     Returns:
         True if successful, False otherwise
     """
     try:
+        # Ensure main branch is updated before creating new branch
+        if update_main:
+            success, error = ensure_main_branch_updated(working_dir, main_branch, logger)
+            if not success:
+                if logger:
+                    logger.error(f"Failed to update main branch before creating {branch_name}: {error}")
+                else:
+                    print(f"Failed to update main branch before creating {branch_name}: {error}")
+                return False
+
         # Try to create and checkout
         result = subprocess.run(
             ["git", "checkout", "-b", branch_name],
@@ -54,10 +186,15 @@ def create_branch(branch_name: str, working_dir: str) -> bool:
         )
 
         if result.returncode == 0:
+            if logger:
+                logger.info(f"✓ Branch {branch_name} created successfully")
             return True
 
         # If branch exists, just checkout
         if "already exists" in result.stderr:
+            if logger:
+                logger.info(f"Branch {branch_name} already exists, checking out")
+
             result = subprocess.run(
                 ["git", "checkout", branch_name],
                 capture_output=True,
@@ -66,10 +203,15 @@ def create_branch(branch_name: str, working_dir: str) -> bool:
             )
             return result.returncode == 0
 
+        if logger:
+            logger.error(f"Failed to create branch: {result.stderr}")
         return False
 
     except Exception as e:
-        print(f"Error creating branch: {e}")
+        if logger:
+            logger.error(f"Error creating branch: {e}")
+        else:
+            print(f"Error creating branch: {e}")
         return False
 
 
