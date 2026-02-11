@@ -61,9 +61,11 @@ def create_worktree(
                 logger.error(error)
             return False, error
 
-        # Create worktree with new branch
+        # Create worktree with new branch from remote base branch
+        # This ensures the worktree is always created from the latest remote code
         if logger:
             logger.info(f"Creating worktree at {worktree_path} with branch {branch_name}")
+            logger.info(f"Using latest code from origin/{base_branch}")
 
         result = subprocess.run(
             [
@@ -82,7 +84,8 @@ def create_worktree(
 
         if result.returncode == 0:
             if logger:
-                logger.info(f"Worktree created successfully at {worktree_path}")
+                logger.info(f"✓ Worktree created successfully at {worktree_path}")
+                logger.info(f"✓ Worktree is based on latest origin/{base_branch}")
             return True, worktree_path
 
         # If branch already exists, try without -b flag

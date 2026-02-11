@@ -327,7 +327,7 @@ async def trigger_chore_implement_workflow(
             branch_name = f"issue-{issue_number}"
 
         logger.info(f"Creating branch: {branch_name}")
-        if create_branch(branch_name, working_dir):
+        if create_branch(branch_name, working_dir, logger=logger):
             logger.info(f"✓ Branch created: {branch_name}")
         else:
             logger.warning(f"⚠️ Failed to create branch {branch_name}, continuing anyway")
