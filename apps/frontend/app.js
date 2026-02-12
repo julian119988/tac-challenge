@@ -172,14 +172,35 @@ class CameraManager {
 
     if (!faceBoundingBox) return;
 
+    // Calculate scale factor from video dimensions to canvas dimensions
+    const scaleX = this.canvas.width / this.video.videoWidth;
+    const scaleY = this.canvas.height / this.video.videoHeight;
+
+    // Helper function to scale a point from video coordinates to canvas coordinates
+    const scalePoint = (point) => ({
+      x: point.x * scaleX,
+      y: point.y * scaleY
+    });
+
+    // Helper function to scale a bounding box
+    const scaleBox = (box) => ({
+      x: box.x * scaleX,
+      y: box.y * scaleY,
+      width: box.width * scaleX,
+      height: box.height * scaleY
+    });
+
+    // Scale the bounding box
+    const scaledBox = scaleBox(faceBoundingBox);
+
     // Draw transparent red rectangle around face
     this.ctx.strokeStyle = CONFIG.visualization.faceBoxColor;
     this.ctx.fillStyle = CONFIG.visualization.faceBoxFillColor;
     this.ctx.lineWidth = CONFIG.visualization.faceBoxLineWidth;
 
     // Draw face bounding box with fill
-    this.ctx.fillRect(faceBoundingBox.x, faceBoundingBox.y, faceBoundingBox.width, faceBoundingBox.height);
-    this.ctx.strokeRect(faceBoundingBox.x, faceBoundingBox.y, faceBoundingBox.width, faceBoundingBox.height);
+    this.ctx.fillRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
+    this.ctx.strokeRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
 
     // Draw landmarks as dots
     this.ctx.fillStyle = CONFIG.visualization.landmarkColor;
@@ -187,34 +208,34 @@ class CameraManager {
     // Draw eye landmarks
     if (leftEyeLandmarks) {
       leftEyeLandmarks.forEach(point => {
-        this.drawLandmarkDot(point, CONFIG.visualization.eyeLandmarkRadius);
+        this.drawLandmarkDot(scalePoint(point), CONFIG.visualization.eyeLandmarkRadius);
       });
     }
 
     if (rightEyeLandmarks) {
       rightEyeLandmarks.forEach(point => {
-        this.drawLandmarkDot(point, CONFIG.visualization.eyeLandmarkRadius);
+        this.drawLandmarkDot(scalePoint(point), CONFIG.visualization.eyeLandmarkRadius);
       });
     }
 
     // Draw nose landmarks
     if (noseLandmarks) {
       noseLandmarks.forEach(point => {
-        this.drawLandmarkDot(point, CONFIG.visualization.noseLandmarkRadius);
+        this.drawLandmarkDot(scalePoint(point), CONFIG.visualization.noseLandmarkRadius);
       });
     }
 
     // Draw mouth landmarks
     if (mouthLandmarks) {
       mouthLandmarks.forEach(point => {
-        this.drawLandmarkDot(point, CONFIG.visualization.mouthLandmarkRadius);
+        this.drawLandmarkDot(scalePoint(point), CONFIG.visualization.mouthLandmarkRadius);
       });
     }
 
     // Draw face outline landmarks (less prominent)
     if (faceOutlineLandmarks) {
       faceOutlineLandmarks.forEach(point => {
-        this.drawLandmarkDot(point, CONFIG.visualization.faceOutlineLandmarkRadius);
+        this.drawLandmarkDot(scalePoint(point), CONFIG.visualization.faceOutlineLandmarkRadius);
       });
     }
   }
@@ -223,6 +244,9 @@ class CameraManager {
    * Draw a landmark dot at the given point
    */
   drawLandmarkDot(point, radius) {
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') {
+      return;
+    }
     this.ctx.beginPath();
     this.ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
     this.ctx.fill();
@@ -387,7 +411,7 @@ class FocusKeeperApp {
         console.error('Detection error:', error);
       }
 
-      // Schedule next frame
+      // Schedule next detection after current one completes
       requestAnimationFrame(detectLoop);
     };
 
