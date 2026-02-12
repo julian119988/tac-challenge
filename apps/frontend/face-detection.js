@@ -69,11 +69,28 @@ export class FaceDetector {
         gazeInfo.isLookingForward &&
         Math.abs(headPose.yaw) < CONFIG.detection.headTurnThreshold;
 
+      // Debug logging
+      console.log('[Detection] Looking at screen:', lookingAtScreen,
+                  '| Gaze forward:', gazeInfo.isLookingForward,
+                  '| Head yaw:', Math.abs(headPose.yaw).toFixed(2),
+                  '| Threshold:', CONFIG.detection.headTurnThreshold);
+
+      // Extract eye landmarks for visualization
+      const keypoints = face.keypoints;
+      const leftEyeIndices = [33, 133, 160, 159, 158, 157, 173];
+      const rightEyeIndices = [362, 263, 385, 386, 387, 388, 398];
+
+      const leftEyeLandmarks = leftEyeIndices.map(idx => keypoints[idx]);
+      const rightEyeLandmarks = rightEyeIndices.map(idx => keypoints[idx]);
+
       return {
         faceDetected: true,
         lookingAtScreen,
         confidence: gazeInfo.confidence,
         headPose,
+        leftEyeLandmarks,
+        rightEyeLandmarks,
+        keypoints,
       };
     } catch (error) {
       console.error('Face detection error:', error);
@@ -114,6 +131,11 @@ export class FaceDetector {
       const horizontalDeviation = Math.abs(eyeCenterX - faceCenterX);
       const isLookingForward = horizontalDeviation < 30; // threshold for looking forward
 
+      // Debug logging
+      console.log('[Gaze] Horizontal deviation:', horizontalDeviation.toFixed(2),
+                  '| Looking forward:', isLookingForward,
+                  '| Confidence: 0.8');
+
       return {
         isLookingForward,
         confidence: 0.8, // placeholder confidence
@@ -149,6 +171,9 @@ export class FaceDetector {
       // Calculate yaw angle (simplified)
       const yaw = (noseToCenterX / faceWidth) * 90; // rough estimate in degrees
 
+      // Debug logging
+      console.log('[Head Pose] Yaw angle:', yaw.toFixed(2), 'degrees');
+
       return {
         yaw, // left-right head turn
         pitch: 0, // up-down (not implemented)
@@ -181,6 +206,34 @@ export class FaceDetector {
     return {
       x: sum.x / points.length,
       y: sum.y / points.length,
+    };
+  }
+
+  /**
+   * Calculate bounding box around eye landmarks
+   * @param {Array} eyeLandmarks - Array of eye landmark points {x, y}
+   * @returns {Object} Bounding box {x, y, width, height}
+   */
+  getEyeBoundingBox(eyeLandmarks) {
+    if (!eyeLandmarks || eyeLandmarks.length === 0) {
+      return null;
+    }
+
+    const xs = eyeLandmarks.map(p => p.x);
+    const ys = eyeLandmarks.map(p => p.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const padding = 8; // pixels of padding around the eye
+
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + (padding * 2),
+      height: (maxY - minY) + (padding * 2),
     };
   }
 
