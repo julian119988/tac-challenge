@@ -135,7 +135,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 
 ### 9. Create Example Environment File
 - Create `.env.example` showing required configuration:
-  - `GITHUB_WEBHOOK_SECRET=your_secret_here`
+  - `GH_WB_SECRET=your_secret_here`
   - `SERVER_HOST=0.0.0.0`
   - `SERVER_PORT=8000`
   - `ADW_WORKING_DIR=/path/to/project`
@@ -171,7 +171,7 @@ To connect GitHub to this server:
 1. Go to repository Settings → Webhooks → Add webhook
 2. Set Payload URL to: `https://your-server.com/webhooks/github`
 3. Set Content type to: `application/json`
-4. Set Secret to match `GITHUB_WEBHOOK_SECRET` env var
+4. Set Secret to match `GH_WB_SECRET` env var
 5. Select individual events: Issues, Pull requests
 6. Save webhook
 

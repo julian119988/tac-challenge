@@ -8,7 +8,7 @@ Vercel Configuration:
     All HTTP requests are routed to this entry point.
 
 Environment Variables Required:
-    - GITHUB_WEBHOOK_SECRET: Secret for validating GitHub webhook signatures
+    - GH_WB_SECRET: Secret for validating GitHub webhook signatures
     - ANTHROPIC_API_KEY: API key for Anthropic Claude integration
     - ADW_WORKING_DIR: Working directory for ADW operations (default: /tmp)
     - ENVIRONMENT: Deployment environment (default: production)

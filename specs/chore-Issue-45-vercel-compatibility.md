@@ -36,7 +36,7 @@ IMPORTANT: Execute every step in order, top to bottom.
   - Route pattern: `/(.*)`
   - Destination: `api/index.py`
 - Define environment variables that need to be configured in Vercel dashboard
-  - GITHUB_WEBHOOK_SECRET (using Vercel secrets)
+  - GH_WB_SECRET (using Vercel secrets)
   - ANTHROPIC_API_KEY (using Vercel secrets)
   - ADW_WORKING_DIR (set to `/tmp` for serverless environment)
   - SERVER_HOST, SERVER_PORT, ENVIRONMENT
@@ -101,7 +101,7 @@ Execute these commands to validate the chore is complete:
 ### Vercel Deployment Requirements
 1. A `vercel.json` configuration file that tells Vercel how to build and run the application
 2. Proper routing configuration to direct HTTP requests to the FastAPI app via api/index.py
-3. Environment variables must be configured in the Vercel dashboard (GITHUB_WEBHOOK_SECRET, ANTHROPIC_API_KEY)
+3. Environment variables must be configured in the Vercel dashboard (GH_WB_SECRET, ANTHROPIC_API_KEY)
 4. The FastAPI app needs to be exposed as an ASGI application for Vercel's serverless functions
 5. Python path manipulation in api/index.py to ensure proper imports in serverless environment
 

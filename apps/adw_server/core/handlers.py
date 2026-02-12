@@ -171,7 +171,7 @@ def validate_webhook_signature(
         is_valid = validate_webhook_signature(
             payload_body=await request.body(),
             signature_header=request.headers.get("X-Hub-Signature-256"),
-            secret=config.github_webhook_secret
+            secret=config.gh_wb_secret
         )
     """
     if not signature_header:

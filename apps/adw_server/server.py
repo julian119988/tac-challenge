@@ -9,7 +9,7 @@ The server is an automation tool that bridges external events (GitHub webhooks)
 and ADW workflows for automated development tasks.
 
 Usage:
-    # Run with default settings (requires GITHUB_WEBHOOK_SECRET in .env)
+    # Run with default settings (requires GH_WB_SECRET in .env)
     python apps/adw_server/main.py
 
     # Run with uvicorn directly
@@ -20,7 +20,7 @@ Usage:
 
 Environment Variables:
     See .env.example for required configuration, including:
-    - GITHUB_WEBHOOK_SECRET (required)
+    - GH_WB_SECRET (required)
     - SERVER_HOST (default: 0.0.0.0)
     - SERVER_PORT (default: 8000)
     - ADW_WORKING_DIR (default: current directory)
@@ -256,7 +256,7 @@ async def process_github_webhook(request: Request):
     is_valid = validate_webhook_signature(
         payload_body=body,
         signature_header=signature,
-        secret=config.github_webhook_secret,
+        secret=config.gh_wb_secret,
     )
 
     if not is_valid:

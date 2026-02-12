@@ -24,12 +24,12 @@ def test_config_loads_from_env(test_env_vars, temp_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
 
-    assert config.github_webhook_secret == "test_secret_1234567890"
+    assert config.gh_wb_secret == "test_secret_1234567890"
     assert config.adw_working_dir == temp_dir
     assert config.static_files_dir == static_dir
 
@@ -42,7 +42,7 @@ def test_config_default_values(temp_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -66,7 +66,7 @@ def test_config_custom_values(temp_dir):
     config = ServerConfig(
         server_host="127.0.0.1",
         server_port=9000,
-        github_webhook_secret="custom_secret_1234567890",
+        gh_wb_secret="custom_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir,
         cors_enabled=False,
@@ -76,7 +76,7 @@ def test_config_custom_values(temp_dir):
 
     assert config.server_host == "127.0.0.1"
     assert config.server_port == 9000
-    assert config.github_webhook_secret == "custom_secret_1234567890"
+    assert config.gh_wb_secret == "custom_secret_1234567890"
     assert config.cors_enabled is False
     assert config.log_level == "DEBUG"
     assert config.environment == "production"
@@ -87,13 +87,13 @@ def test_config_custom_values(temp_dir):
 # ============================================================================
 
 def test_config_requires_webhook_secret():
-    """Test configuration requires github_webhook_secret."""
+    """Test configuration requires gh_wb_secret."""
     from apps.adw_server.core.config import ServerConfig
 
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig()
 
-    assert "github_webhook_secret" in str(exc_info.value)
+    assert "gh_wb_secret" in str(exc_info.value)
 
 
 def test_config_rejects_empty_webhook_secret(temp_dir):
@@ -105,7 +105,7 @@ def test_config_rejects_empty_webhook_secret(temp_dir):
 
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig(
-            github_webhook_secret="",
+            gh_wb_secret="",
             adw_working_dir=temp_dir,
             static_files_dir=static_dir
         )
@@ -122,7 +122,7 @@ def test_config_rejects_short_webhook_secret(temp_dir):
 
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig(
-            github_webhook_secret="short",
+            gh_wb_secret="short",
             adw_working_dir=temp_dir,
             static_files_dir=static_dir
         )
@@ -141,7 +141,7 @@ def test_config_validates_port_range(temp_dir):
     with pytest.raises(ValidationError):
         ServerConfig(
             server_port=0,
-            github_webhook_secret="test_secret_1234567890",
+            gh_wb_secret="test_secret_1234567890",
             adw_working_dir=temp_dir,
             static_files_dir=static_dir
         )
@@ -150,7 +150,7 @@ def test_config_validates_port_range(temp_dir):
     with pytest.raises(ValidationError):
         ServerConfig(
             server_port=70000,
-            github_webhook_secret="test_secret_1234567890",
+            gh_wb_secret="test_secret_1234567890",
             adw_working_dir=temp_dir,
             static_files_dir=static_dir
         )
@@ -166,7 +166,7 @@ def test_config_validates_log_level(temp_dir):
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig(
             log_level="INVALID_LEVEL",
-            github_webhook_secret="test_secret_1234567890",
+            gh_wb_secret="test_secret_1234567890",
             adw_working_dir=temp_dir,
             static_files_dir=static_dir
         )
@@ -186,7 +186,7 @@ def test_config_validates_working_dir_exists(temp_dir):
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig(
             adw_working_dir=nonexistent_dir,
-            github_webhook_secret="test_secret_1234567890",
+            gh_wb_secret="test_secret_1234567890",
             static_files_dir=static_dir
         )
 
@@ -201,7 +201,7 @@ def test_config_creates_static_dir_if_missing(temp_dir):
     static_dir = os.path.join(temp_dir, "new_static")
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -222,7 +222,7 @@ def test_config_converts_working_dir_to_absolute(temp_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -239,7 +239,7 @@ def test_config_converts_static_dir_to_absolute(temp_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -255,7 +255,7 @@ def test_config_get_absolute_static_path(temp_dir):
     os.makedirs(static_dir, exist_ok=True)
 
     config = ServerConfig(
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -278,7 +278,7 @@ def test_config_is_production_true(temp_dir):
 
     config = ServerConfig(
         environment="production",
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -295,7 +295,7 @@ def test_config_is_production_false(temp_dir):
 
     config = ServerConfig(
         environment="development",
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -312,7 +312,7 @@ def test_config_is_production_case_insensitive(temp_dir):
 
     config = ServerConfig(
         environment="PRODUCTION",
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir
     )
@@ -349,4 +349,4 @@ def test_reload_config_creates_new_instance(test_env_vars, monkeypatch):
 
     # They should have the same values but be different objects
     assert config1 is not config2
-    assert config1.github_webhook_secret == config2.github_webhook_secret
+    assert config1.gh_wb_secret == config2.gh_wb_secret

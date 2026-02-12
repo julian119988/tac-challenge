@@ -288,7 +288,7 @@ def mock_config(temp_dir: str):
     return ServerConfig(
         server_host="127.0.0.1",
         server_port=8000,
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir
     )
 
@@ -335,7 +335,7 @@ test('should attach click event listener', () => {
 async def test_webhook_valid_signature(async_client, mock_config):
     """Test webhook with valid signature is accepted."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     response = await async_client.post(
         "/",
@@ -477,7 +477,7 @@ uv run pytest tests/
 ```python
 @pytest.fixture
 def test_env_vars(monkeypatch):
-    monkeypatch.setenv("GITHUB_WEBHOOK_SECRET", "test_secret_1234567890")
+    monkeypatch.setenv("GH_WB_SECRET", "test_secret_1234567890")
 ```
 
 #### Frontend Tests

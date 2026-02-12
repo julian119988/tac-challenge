@@ -31,7 +31,7 @@ In the Vercel project settings, add the following environment variables:
 
 #### Required Variables
 
-- **GITHUB_WEBHOOK_SECRET**: Your GitHub webhook secret for validating webhook signatures
+- **GH_WB_SECRET**: Your GitHub webhook secret for validating webhook signatures
   - Generate a secure random string (e.g., `openssl rand -hex 32`)
   - Set this same value in your GitHub webhook configuration
 
@@ -80,7 +80,7 @@ In the Vercel project settings, add the following environment variables:
    - For root endpoint: `https://your-app.vercel.app/`
    - Or use: `https://your-app.vercel.app/webhooks/github`
 4. Set Content type to `application/json`
-5. Set the Secret to match your `GITHUB_WEBHOOK_SECRET` environment variable
+5. Set the Secret to match your `GH_WB_SECRET` environment variable
 6. Select events:
    - Issues
    - Pull requests
@@ -175,7 +175,7 @@ If you see import errors in Vercel logs:
 ### Webhook Signature Validation Fails
 
 If webhooks are rejected with 401 errors:
-- Verify `GITHUB_WEBHOOK_SECRET` matches in both Vercel and GitHub
+- Verify `GH_WB_SECRET` matches in both Vercel and GitHub
 - Check that the secret doesn't have extra whitespace
 - Ensure the webhook is sending the `X-Hub-Signature-256` header
 
