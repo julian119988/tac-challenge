@@ -13,17 +13,6 @@
     }
   ],
   "env": {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    "GITHUB_WEBHOOK_SECRET": "@github-webhook-secret",
-    "ANTHROPIC_API_KEY": "@anthropic-api-key",
-=======
->>>>>>> Stashed changes
-    "ADW_WORKING_DIR": "/tmp",
-    "SERVER_HOST": "0.0.0.0",
-    "SERVER_PORT": "8000",
-=======
->>>>>>> Stashed changes
     "ENVIRONMENT": "production"
   }
 }

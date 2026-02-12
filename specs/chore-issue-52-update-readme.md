@@ -134,7 +134,7 @@ IMPORTANT: Execute every step in order, top to bottom.
   - Serverless function execution limits
   - Ephemeral filesystem (/tmp only)
   - Cold start behavior
-  - Environment variables required: GITHUB_WEBHOOK_SECRET, ANTHROPIC_API_KEY
+  - Environment variables required: GH_WB_SECRET, ANTHROPIC_API_KEY
 - Link to `VERCEL_DEPLOYMENT.md` for comprehensive deployment guide
 
 ### 8. Update Documentation Section

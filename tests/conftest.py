@@ -165,7 +165,7 @@ def mock_config(temp_dir: str):
     config = ServerConfig(
         server_host="127.0.0.1",
         server_port=8000,
-        github_webhook_secret="test_secret_1234567890",
+        gh_wb_secret="test_secret_1234567890",
         adw_working_dir=temp_dir,
         static_files_dir=static_dir,
         cors_enabled=True,
@@ -183,7 +183,7 @@ def test_env_vars(temp_dir: str, monkeypatch):
     os.makedirs(static_dir, exist_ok=True)
 
     env_vars = {
-        "GITHUB_WEBHOOK_SECRET": "test_secret_1234567890",
+        "GH_WB_SECRET": "test_secret_1234567890",
         "SERVER_HOST": "127.0.0.1",
         "SERVER_PORT": "8000",
         "ADW_WORKING_DIR": temp_dir,

@@ -23,7 +23,7 @@ apps/adw_server/
 ```bash
 cd apps/adw_server
 cp .env.example .env
-# Edit .env and set GITHUB_WEBHOOK_SECRET and ANTHROPIC_API_KEY
+# Edit .env and set GH_WB_SECRET and ANTHROPIC_API_KEY
 ```
 
 ### 2. Start the server
@@ -60,7 +60,7 @@ Server configuration management using Pydantic settings:
 - Environment-specific configuration
 
 **Key settings:**
-- `GITHUB_WEBHOOK_SECRET` - Required for webhook validation
+- `GH_WB_SECRET` - Required for webhook validation
 - `ANTHROPIC_API_KEY` - Required for ADW workflows
 - `SERVER_HOST` / `SERVER_PORT` - Server binding
 - `ADW_WORKING_DIR` - Working directory for workflows
@@ -116,7 +116,7 @@ Go to repository **Settings → Webhooks → Add webhook**:
 
 - **Payload URL:** `https://your-server.com/` or use ngrok for local: `https://abc123.ngrok.io/`
 - **Content type:** `application/json`
-- **Secret:** Same as `GITHUB_WEBHOOK_SECRET` in `.env`
+- **Secret:** Same as `GH_WB_SECRET` in `.env`
 - **Events:** Select "Issues" and "Pull requests"
 
 ### 2. Test the Integration
@@ -246,7 +246,7 @@ See `.env.example` for complete list. Key variables:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GITHUB_WEBHOOK_SECRET` | Yes | - | Webhook validation secret |
+| `GH_WB_SECRET` | Yes | - | Webhook validation secret |
 | `ANTHROPIC_API_KEY` | Yes | - | Claude API key for ADW |
 | `SERVER_HOST` | No | 0.0.0.0 | Server host address |
 | `SERVER_PORT` | No | 8000 | Server port |
@@ -259,7 +259,7 @@ See `.env.example` for complete list. Key variables:
 
 ### Webhook signature validation fails
 
-- Verify `GITHUB_WEBHOOK_SECRET` matches GitHub webhook configuration
+- Verify `GH_WB_SECRET` matches GitHub webhook configuration
 - Check webhook payload is valid JSON
 - Ensure `X-Hub-Signature-256` header is present
 

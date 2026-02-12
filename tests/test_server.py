@@ -86,7 +86,7 @@ async def test_webhook_valid_signature(
 ):
     """Test webhook with valid signature is accepted."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     with patch("apps.adw_server.core.handlers.handle_issue_event") as mock_handler:
         mock_handler.return_value = {
@@ -163,7 +163,7 @@ async def test_webhook_missing_event_header(
 ):
     """Test webhook with missing X-GitHub-Event header is rejected."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     response = await async_client.post(
         "/",
@@ -191,7 +191,7 @@ async def test_webhook_issue_event(
 ):
     """Test webhook routes issue events to handle_issue_event."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     with patch("apps.adw_server.core.handlers.handle_issue_event") as mock_handler:
         mock_handler.return_value = {
@@ -236,7 +236,7 @@ async def test_webhook_pull_request_event(
 ):
     """Test webhook routes pull request events to handle_pull_request_event."""
     payload = json.dumps(mock_github_pr_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     with patch("apps.adw_server.core.handlers.handle_pull_request_event") as mock_handler:
         mock_handler.return_value = {
@@ -278,7 +278,7 @@ async def test_webhook_unsupported_event(
 ):
     """Test webhook ignores unsupported event types."""
     payload = json.dumps({"action": "created", "comment": {"body": "test"}}).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     response = await async_client.post(
         "/",
@@ -309,7 +309,7 @@ async def test_webhook_alternative_endpoint(
 ):
     """Test alternative webhook endpoint /webhooks/github works the same."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     with patch("apps.adw_server.core.handlers.handle_issue_event") as mock_handler:
         mock_handler.return_value = {
@@ -342,7 +342,7 @@ async def test_webhook_invalid_json(
 ):
     """Test webhook with invalid JSON payload is rejected."""
     payload = b"invalid json here"
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     response = await async_client.post(
         "/",
@@ -367,7 +367,7 @@ async def test_webhook_handler_error(
 ):
     """Test webhook handles errors from event handlers gracefully."""
     payload = json.dumps(mock_github_issue_payload).encode("utf-8")
-    signature = generate_github_signature(payload, mock_config.github_webhook_secret)
+    signature = generate_github_signature(payload, mock_config.gh_wb_secret)
 
     with patch("apps.adw_server.core.handlers.handle_issue_event") as mock_handler:
         mock_handler.side_effect = Exception("Handler error")

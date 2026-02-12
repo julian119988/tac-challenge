@@ -20,7 +20,7 @@ class ServerConfig(BaseSettings):
     Attributes:
         server_host: Host address to bind the server (default: 0.0.0.0)
         server_port: Port to run the server on (default: 8000)
-        github_webhook_secret: Secret for validating GitHub webhook signatures (required)
+        gh_wb_secret: Secret for validating GitHub webhook signatures (required)
         adw_working_dir: Working directory for ADW workflow execution (default: current dir)
         static_files_dir: Directory for serving static frontend files (default: apps/static)
         cors_enabled: Enable CORS for frontend requests (default: True)
@@ -41,7 +41,7 @@ class ServerConfig(BaseSettings):
     server_port: int = Field(default=8000, description="Server port", ge=1, le=65535)
 
     # GitHub webhook settings
-    github_webhook_secret: str = Field(
+    gh_wb_secret: str = Field(
         ...,  # Required field
         description="GitHub webhook secret for signature validation"
     )
@@ -104,18 +104,18 @@ class ServerConfig(BaseSettings):
         le=10
     )
 
-    @field_validator("github_webhook_secret")
+    @field_validator("gh_wb_secret")
     @classmethod
     def validate_webhook_secret(cls, v: str) -> str:
         """Validate that webhook secret is provided and not empty."""
         if not v or v.strip() == "":
             raise ValueError(
-                "GITHUB_WEBHOOK_SECRET must be set. "
+                "GH_WB_SECRET must be set. "
                 "Generate a strong secret and configure it in GitHub webhook settings."
             )
         if len(v) < 16:
             raise ValueError(
-                "GITHUB_WEBHOOK_SECRET should be at least 16 characters for security. "
+                "GH_WB_SECRET should be at least 16 characters for security. "
                 "Generate a strong random secret."
             )
         return v

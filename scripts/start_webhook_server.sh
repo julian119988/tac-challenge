@@ -5,7 +5,7 @@
 if [ ! -f .env ]; then
     echo "Error: .env file not found in project root"
     echo "Please run: cp apps/adw_server/.env.example .env"
-    echo "Then edit .env and set GITHUB_WEBHOOK_SECRET and ANTHROPIC_API_KEY"
+    echo "Then edit .env and set GH_WB_SECRET and ANTHROPIC_API_KEY"
     exit 1
 fi
 

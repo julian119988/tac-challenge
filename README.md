@@ -88,7 +88,7 @@ tac-challenge/
 cp apps/adw_server/.env.example .env
 
 # Editar .env y configurar:
-# - GITHUB_WEBHOOK_SECRET (para webhooks de GitHub)
+# - GH_WB_SECRET (para webhooks de GitHub)
 # - ANTHROPIC_API_KEY (para workflows ADW)
 ```
 
@@ -182,7 +182,7 @@ El ADW Server es una **herramienta de automatización**, no el servidor principa
 1. Ir a Settings → Webhooks → Add webhook
 2. Payload URL: `https://tu-servidor.com/`
 3. Content type: `application/json`
-4. Secret: (mismo que `GITHUB_WEBHOOK_SECRET` en `.env`)
+4. Secret: (mismo que `GH_WB_SECRET` en `.env`)
 5. Events: Seleccionar "Issues" y "Pull requests"
 
 **Labels soportados:**
@@ -339,7 +339,7 @@ vercel deploy
 Variables de entorno en Vercel dashboard:
 
 ```bash
-GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
+GH_WB_SECRET=your_webhook_secret_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 AUTO_MERGE_ON_APPROVAL=true                    # Opcional
 AUTO_REIMPLEMENT_ON_CHANGES=true              # Opcional
@@ -469,7 +469,7 @@ Siéntete libre de adaptar esta estructura a tus necesidades específicas.
 **Problema**: Webhooks rechazados con error de validación
 
 **Soluciones**:
-- Verifica que `GITHUB_WEBHOOK_SECRET` en `.env` coincida con GitHub settings
+- Verifica que `GH_WB_SECRET` en `.env` coincida con GitHub settings
 - Asegura que el secret no tenga espacios o caracteres especiales
 - Regenera el secret si es necesario
 
