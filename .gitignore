@@ -74,3 +74,5 @@ bun.lockb
 deep_docs/
 
 example/
+.vercel
+.env*.local
