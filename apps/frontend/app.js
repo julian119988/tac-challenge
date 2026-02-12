@@ -17,6 +17,33 @@ class CameraManager {
   }
 
   /**
+   * Check if MediaDevices API is supported
+   */
+  isSupported() {
+    // Check if navigator exists
+    if (typeof navigator === 'undefined') {
+      return { supported: false, reason: 'navigator_missing' };
+    }
+
+    // Check if navigator.mediaDevices exists
+    if (!navigator.mediaDevices) {
+      return { supported: false, reason: 'mediadevices_missing' };
+    }
+
+    // Check if getUserMedia exists
+    if (!navigator.mediaDevices.getUserMedia) {
+      return { supported: false, reason: 'getusermedia_missing' };
+    }
+
+    // Check if in secure context
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      return { supported: false, reason: 'insecure_context' };
+    }
+
+    return { supported: true, reason: null };
+  }
+
+  /**
    * Initialize camera with canvas element
    */
   async initialize(canvas) {
@@ -33,6 +60,29 @@ class CameraManager {
    */
   async start() {
     try {
+      // Check if camera API is supported
+      const supportCheck = this.isSupported();
+      if (!supportCheck.supported) {
+        let errorMessage;
+        switch (supportCheck.reason) {
+          case 'navigator_missing':
+            errorMessage = 'Browser environment not detected. Camera access requires a web browser.';
+            break;
+          case 'mediadevices_missing':
+            errorMessage = 'Your browser does not support camera access. Please update to a modern browser (Chrome 53+, Firefox 36+, Safari 11+, Edge 79+).';
+            break;
+          case 'getusermedia_missing':
+            errorMessage = 'getUserMedia API is not available. Please update your browser to the latest version.';
+            break;
+          case 'insecure_context':
+            errorMessage = 'Camera access requires a secure connection. Please access this page via HTTPS or localhost (not via IP address like 127.0.0.1).';
+            break;
+          default:
+            errorMessage = 'Camera access is not supported in this environment.';
+        }
+        throw new Error(errorMessage);
+      }
+
       const constraints = {
         video: {
           width: { ideal: CONFIG.camera.width },
@@ -61,7 +111,20 @@ class CameraManager {
       return true;
     } catch (error) {
       console.error('Camera access error:', error);
-      throw new Error('Failed to access camera: ' + error.message);
+
+      // Provide user-friendly error messages
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        throw new Error('Camera permission denied. Please allow camera access in your browser settings and try again.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        throw new Error('No camera found. Please connect a camera and try again.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        throw new Error('Camera is already in use by another application. Please close other apps using the camera and try again.');
+      } else if (error.message) {
+        // Re-throw custom error messages from our support check
+        throw error;
+      } else {
+        throw new Error('Failed to access camera: ' + error.message);
+      }
     }
   }
 
@@ -312,6 +375,38 @@ class FocusKeeperApp {
       await this.cameraManager.initialize(canvas);
       this.attentionPlayer.initialize();
       await this.faceDetector.initialize();
+
+      // Check camera API availability
+      const supportCheck = this.cameraManager.isSupported();
+      if (!supportCheck.supported) {
+        // Disable start button
+        startBtn.disabled = true;
+        startBtn.classList.add('disabled');
+
+        // Show warning message
+        let warningMessage;
+        switch (supportCheck.reason) {
+          case 'navigator_missing':
+            warningMessage = 'Camera access not available: Browser environment not detected.';
+            break;
+          case 'mediadevices_missing':
+            warningMessage = 'Camera access not available: Please update to a modern browser (Chrome 53+, Firefox 36+, Safari 11+, Edge 79+).';
+            break;
+          case 'getusermedia_missing':
+            warningMessage = 'Camera access not available: Please update your browser to the latest version.';
+            break;
+          case 'insecure_context':
+            warningMessage = 'Camera access requires HTTPS or localhost. Please use https:// or access via localhost instead of an IP address.';
+            break;
+          default:
+            warningMessage = 'Camera access is not supported in this environment.';
+        }
+
+        this.updateStatus('error', warningMessage);
+        this.showError(warningMessage);
+        console.warn('Camera API not available:', supportCheck.reason);
+        return;
+      }
 
       // Setup button event
       startBtn.addEventListener('click', () => this.toggleSession());
