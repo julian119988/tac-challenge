@@ -38,11 +38,30 @@ In the Vercel project settings, add the following environment variables:
 - **ANTHROPIC_API_KEY**: Your Anthropic API key for Claude integration
   - Get your API key from https://console.anthropic.com/
 
-#### Optional Variables
+#### Optional Variables (Most Set by vercel.json)
+
+The following variables are automatically set by `vercel.json` for serverless deployment. You typically don't need to configure these manually:
 
 - **ADW_WORKING_DIR**: Working directory for ADW operations
-  - Default: `/tmp` (recommended for Vercel)
-  - Note: Vercel's filesystem is ephemeral
+  - **Set by vercel.json**: `/tmp` (Vercel's only writable directory)
+  - Note: Vercel's filesystem is ephemeral and only `/tmp` is writable
+  - The application detects serverless environments and handles read-only filesystems automatically
+
+- **STATIC_FILES_DIR**: Directory for static frontend files
+  - **Set by vercel.json**: `/tmp/static`
+  - Note: In serverless environments like Vercel, static files are typically served by the CDN, not the application
+  - The application gracefully handles missing static directories in serverless environments
+
+- **ENVIRONMENT**: Deployment environment
+  - **Set by vercel.json**: `production`
+  - Options: `development`, `production`
+
+- **VERCEL**: Serverless environment indicator
+  - **Set by Vercel platform**: `1` (string value, not boolean)
+  - Used internally to detect Vercel serverless environment
+  - Documented at: https://vercel.com/docs/concepts/projects/environment-variables#system-environment-variables
+
+The following variables can be configured if needed:
 
 - **SERVER_HOST**: Server host
   - Default: `0.0.0.0`
@@ -50,20 +69,16 @@ In the Vercel project settings, add the following environment variables:
 - **SERVER_PORT**: Server port
   - Default: `8000`
 
-- **ENVIRONMENT**: Deployment environment
-  - Default: `production`
-  - Options: `development`, `production`
-
 - **LOG_LEVEL**: Logging level
   - Default: `INFO`
   - Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
 - **CORS_ENABLED**: Enable CORS
-  - Default: `false`
-  - Set to `true` if needed for cross-origin requests
+  - Default: `true`
+  - Set to `false` if CORS is not needed
 
 - **CORS_ORIGINS**: Allowed CORS origins (comma-separated)
-  - Default: `http://localhost:3000,http://localhost:5173`
+  - Default: `["*"]`
   - Example: `https://yourapp.com,https://www.yourapp.com`
 
 ### 3. Deploy
@@ -134,7 +149,23 @@ Expected response:
 
 ### Serverless Environment
 
+The application automatically detects serverless environments and adjusts its behavior accordingly.
+
+**Detection Criteria**:
+- `VERCEL=1` environment variable (Vercel's documented convention)
+- `AWS_LAMBDA_FUNCTION_NAME` environment variable (AWS Lambda)
+- Working directory starts with `/var/task` (Vercel runtime path)
+- Working directory starts with `/tmp` (common serverless pattern)
+
+**Serverless Behavior**:
+- Directory validation becomes lenient - creation failures are logged but don't fail startup
+- Static files directory is optional (Vercel serves static files via CDN)
+- Only `/tmp` is writable - all temporary files must go there
+- Configuration loading logs environment detection for debugging
+
+**Environment Characteristics**:
 - **Ephemeral filesystem**: Files written to `/tmp` are temporary and may be deleted between invocations
+- **Read-only filesystem**: Everything except `/tmp` is read-only
 - **Execution time limit**: Vercel has a maximum execution time (10 seconds for Hobby, 60 seconds for Pro)
 - **Cold starts**: First request after inactivity may be slower
 
@@ -165,12 +196,42 @@ For long-running ADW workflows, consider:
 
 ## Troubleshooting
 
-### Import Errors
+### Configuration Validation Errors
+
+If you encounter `ValidationError` during deployment:
+
+**Symptom**: Error mentions "could not be created" or "does not exist"
+**Cause**: The application is trying to create directories on a read-only filesystem
+**Solution**:
+- ✓ **Fixed in Issue #56 Review**: Configuration validators now automatically detect serverless environments
+- Ensure `ADW_WORKING_DIR` points to `/tmp` (set in `vercel.json`)
+- Ensure `STATIC_FILES_DIR` points to `/tmp/static` or another `/tmp` subdirectory
+- Check Vercel logs for detailed error messages showing which paths are failing
+
+**How it works**:
+- The application detects serverless environments via:
+  1. `VERCEL=1` environment variable (automatically set by Vercel)
+  2. Working directory paths starting with `/var/task` or `/tmp`
+  3. Presence of `AWS_LAMBDA_FUNCTION_NAME` (for AWS Lambda)
+- In serverless mode, directory creation failures are logged but don't fail the deployment
+- Static files are optional in serverless environments (served separately by CDN)
+
+### Import Errors (FIXED in Issue #56)
 
 If you see import errors in Vercel logs:
+- ✓ **Fixed**: Updated `api/index.py` to use centralized import path setup
+- ✓ **Fixed**: Created `core/serverless_utils.py` for consistent path configuration
+- ✓ **Fixed**: Modified `config.py` validators to handle serverless environments
+- ✓ **Fixed**: Set required environment variables in `vercel.json` (`ADW_WORKING_DIR`, `STATIC_FILES_DIR`)
 - Verify all dependencies are in `requirements.txt`
-- Check that `api/index.py` correctly sets up the Python path
 - Ensure the project structure matches the import paths
+
+**Technical Details of Fixes:**
+- `api/index.py`: Uses `setup_import_paths()` from `serverless_utils` for consistent path configuration
+- `core/serverless_utils.py`: Centralizes serverless detection and path setup logic
+- `config.py`: Validators use `is_serverless_environment()` for consistent detection
+- `config.py`: Added comprehensive logging for debugging configuration issues
+- `vercel.json`: Sets environment variables for serverless-specific paths (`/tmp` directory)
 
 ### Webhook Signature Validation Fails
 

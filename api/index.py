@@ -22,18 +22,26 @@ Note:
 import sys
 import os
 
-# Add the project root to Python path for imports to work correctly
-# In Vercel's environment, the current directory is the project root
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# Set up Python path for imports to work in Vercel's serverless environment
+# This must happen before any app imports
+# Add project root and adw_server to sys.path using centralized utility
 
-# Add adw_server directory to path so core modules can be imported
+# Bootstrap import: Add adw_server to path to import serverless_utils
+current_file = os.path.abspath(__file__)
+api_dir = os.path.dirname(current_file)
+project_root = os.path.dirname(api_dir)
 adw_server_dir = os.path.join(project_root, "apps", "adw_server")
 if adw_server_dir not in sys.path:
     sys.path.insert(0, adw_server_dir)
 
+# Now we can import the centralized path setup utility
+from core.serverless_utils import setup_import_paths
+
+# Configure import paths consistently
+setup_import_paths()
+
 # Import the FastAPI app instance
+# This import will trigger config loading, which now handles serverless environments
 from apps.adw_server.server import app
 
 # Vercel expects the ASGI application to be named 'app'

@@ -13,6 +13,8 @@
     }
   ],
   "env": {
-    "ENVIRONMENT": "production"
+    "ENVIRONMENT": "production",
+    "ADW_WORKING_DIR": "/tmp",
+    "STATIC_FILES_DIR": "/tmp/static"
   }
 }
