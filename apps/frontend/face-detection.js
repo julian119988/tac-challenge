@@ -87,15 +87,23 @@ export class FaceDetector {
       const gazeInfo = this.calculateGazeDirection(face);
       const headPose = this.calculateHeadPose(face);
 
+      // User is looking at screen only if ALL conditions are met:
+      // 1. Eyes looking forward horizontally (existing)
+      // 2. Head not turned to sides beyond threshold (existing)
+      // 3. Head not tilted down beyond threshold (new)
+      // 4. Eyes not looking down based on iris position (new)
       const lookingAtScreen =
         gazeInfo.isLookingForward &&
-        Math.abs(headPose.yaw) < CONFIG.detection.headTurnThreshold;
+        Math.abs(headPose.yaw) < CONFIG.detection.headTurnThreshold &&
+        headPose.pitch > -CONFIG.detection.headPitchThreshold &&
+        !gazeInfo.isLookingDown;
 
       // Debug logging
       console.log('[Detection] Looking at screen:', lookingAtScreen,
                   '| Gaze forward:', gazeInfo.isLookingForward,
                   '| Head yaw:', Math.abs(headPose.yaw).toFixed(2),
-                  '| Threshold:', CONFIG.detection.headTurnThreshold);
+                  '| Head pitch:', headPose.pitch.toFixed(2),
+                  '| Looking down:', gazeInfo.isLookingDown);
 
       // Extract eye landmarks for visualization
       const keypoints = face.keypoints;
@@ -183,17 +191,43 @@ export class FaceDetector {
       const horizontalDeviation = Math.abs(eyeCenterX - faceCenterX);
       const isLookingForward = horizontalDeviation < 30; // threshold for looking forward
 
+      // Calculate vertical gaze component (for looking down detection)
+      // Get upper and lower eye landmarks to establish eye region bounds
+      const upperEyeLandmarks = [159, 158, 157]; // upper eyelid landmarks
+      const lowerEyeLandmarks = [144, 145, 153]; // lower eyelid landmarks
+
+      const upperEyeY = this.getCenter(upperEyeLandmarks.map(idx => keypoints[idx])).y;
+      const lowerEyeY = this.getCenter(lowerEyeLandmarks.map(idx => keypoints[idx])).y;
+
+      // Calculate eye region height
+      const eyeHeight = lowerEyeY - upperEyeY;
+      const eyeRegionCenterY = (upperEyeY + lowerEyeY) / 2;
+
+      // Calculate average iris Y position
+      const irisCenterY = (leftIrisCenter.y + rightIrisCenter.y) / 2;
+
+      // Calculate vertical deviation (normalized by eye height)
+      // Positive value means iris is below center (looking down)
+      // Negative value means iris is above center (looking up)
+      const verticalDeviation = (irisCenterY - eyeRegionCenterY) / eyeHeight;
+
+      // Determine if looking down based on vertical deviation threshold
+      const isLookingDown = verticalDeviation > CONFIG.detection.verticalGazeThreshold;
+
       // Debug logging (reduced frequency)
       if (Math.random() < 0.05) {
         console.log('[Gaze] Horizontal deviation:', horizontalDeviation.toFixed(2),
+                    '| Vertical deviation:', verticalDeviation.toFixed(2),
                     '| Looking forward:', isLookingForward,
-                    '| Confidence: 0.8');
+                    '| Looking down:', isLookingDown);
       }
 
       return {
         isLookingForward,
         confidence: 0.8, // placeholder confidence
         horizontalDeviation,
+        verticalDeviation,
+        isLookingDown,
         leftIrisCenter,
         rightIrisCenter,
         leftIris,
@@ -205,6 +239,8 @@ export class FaceDetector {
         isLookingForward: false,
         confidence: 0,
         horizontalDeviation: 0,
+        verticalDeviation: 0,
+        isLookingDown: false,
       };
     }
   }
@@ -229,12 +265,31 @@ export class FaceDetector {
       // Calculate yaw angle (simplified)
       const yaw = (noseToCenterX / faceWidth) * 90; // rough estimate in degrees
 
+      // Calculate pitch (up-down rotation) using vertical landmarks
+      // Approach: Compare nose tip position relative to nose bridge and face height
+      const noseTip = keypoints[1]; // nose tip
+      const noseBridge = keypoints[6]; // nose bridge
+      const forehead = keypoints[10]; // forehead reference point
+      const chin = keypoints[152]; // chin reference point
+
+      // Calculate vertical distances
+      const faceHeight = Math.abs(chin.y - forehead.y);
+      const noseVector = noseTip.y - noseBridge.y;
+
+      // Normalize nose vertical displacement by face width (for scale invariance)
+      // When looking down: noseTip.y > noseBridge.y (positive y, nose points down)
+      // When looking up: noseTip.y < noseBridge.y (negative y, nose points up)
+      const pitch = (noseVector / faceWidth) * 90; // Convert to degrees
+
+      // Apply bounds checking to prevent extreme values
+      const clampedPitch = Math.max(-60, Math.min(60, pitch));
+
       // Debug logging
-      console.log('[Head Pose] Yaw angle:', yaw.toFixed(2), 'degrees');
+      console.log('[Head Pose] Yaw angle:', yaw.toFixed(2), '| Pitch angle:', clampedPitch.toFixed(2), 'degrees');
 
       return {
         yaw, // left-right head turn
-        pitch: 0, // up-down (not implemented)
+        pitch: clampedPitch, // up-down head tilt (negative = looking down)
         roll: 0, // tilt (not implemented)
       };
     } catch (error) {
