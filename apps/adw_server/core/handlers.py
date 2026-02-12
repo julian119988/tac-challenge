@@ -867,6 +867,13 @@ async def handle_pull_request_event(
         except Exception as e:
             logger.warning(f"Failed to post initial comment to issue #{issue_number}: {e}")
 
+    # Extract PR branch information
+    pr_head_ref = payload.pull_request.get("head", {}).get("ref", "")
+    pr_head_sha = payload.pull_request.get("head", {}).get("sha", "")
+    pr_base_ref = payload.pull_request.get("base", {}).get("ref", "main")
+
+    logger.info(f"PR branch info: head={pr_head_ref}, sha={pr_head_sha}, base={pr_base_ref}")
+
     # Trigger the review workflow
     try:
         logger.info(f"Triggering review workflow for PR #{pr_number}, adw_id={adw_id}")
@@ -876,6 +883,9 @@ async def handle_pull_request_event(
             adw_id=adw_id,
             model=model,
             working_dir=working_dir,
+            pr_head_ref=pr_head_ref,
+            pr_head_sha=pr_head_sha,
+            pr_base_ref=pr_base_ref,
         )
 
         # Format review results for comment

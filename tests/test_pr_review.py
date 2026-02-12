@@ -199,6 +199,13 @@ class TestHandlePullRequestEvent:
             pull_request={
                 "body": "Closes #123",
                 "html_url": "https://github.com/owner/repo/pull/42",
+                "head": {
+                    "ref": "feature-branch",
+                    "sha": "abc123def456",
+                },
+                "base": {
+                    "ref": "main",
+                },
             },
             repository=GitHubRepository(
                 name="repo",
@@ -344,27 +351,34 @@ class TestTriggerReviewWorkflow:
         from core.adw_integration import trigger_review_workflow
 
         with patch("core.adw_integration.execute_template") as mock_execute:
-            mock_response = Mock()
-            mock_response.success = True
-            mock_response.output = "Review completed successfully"
-            mock_response.session_id = "session123"
-            mock_execute.return_value = mock_response
+            with patch("core.adw_integration.subprocess.run") as mock_run:
+                # Mock git operations
+                mock_run.return_value = Mock(returncode=0, stdout="main\n", stderr="")
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_response)
+                mock_response = Mock()
+                mock_response.success = True
+                mock_response.output = "Review completed successfully"
+                mock_response.session_id = "session123"
+                mock_execute.return_value = mock_response
 
-                result = await trigger_review_workflow(
-                    pr_number=42,
-                    repo_full_name="owner/repo",
-                    adw_id="test123",
-                    model="sonnet",
-                    working_dir="/tmp",
-                )
+                with patch("asyncio.get_event_loop") as mock_loop:
+                    mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_response)
 
-                assert result.success is True
-                assert result.output == "Review completed successfully"
-                assert result.adw_id == "test123"
-                assert "reviewer" in result.output_dir
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                        pr_head_ref="feature-branch",
+                        pr_head_sha="abc123",
+                        pr_base_ref="main",
+                    )
+
+                    assert result.success is True
+                    assert result.output == "Review completed successfully"
+                    assert result.adw_id == "test123"
+                    assert "reviewer" in result.output_dir
 
     @pytest.mark.asyncio
     async def test_trigger_review_workflow_failure(self):
@@ -372,18 +386,157 @@ class TestTriggerReviewWorkflow:
         from core.adw_integration import trigger_review_workflow
 
         with patch("core.adw_integration.execute_template") as mock_execute:
-            mock_execute.side_effect = Exception("Execution failed")
+            with patch("core.adw_integration.subprocess.run") as mock_run:
+                # Mock git operations
+                mock_run.return_value = Mock(returncode=0, stdout="main\n", stderr="")
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_in_executor = AsyncMock(side_effect=Exception("Execution failed"))
+                mock_execute.side_effect = Exception("Execution failed")
 
-                result = await trigger_review_workflow(
-                    pr_number=42,
-                    repo_full_name="owner/repo",
-                    adw_id="test123",
-                    model="sonnet",
-                    working_dir="/tmp",
-                )
+                with patch("asyncio.get_event_loop") as mock_loop:
+                    mock_loop.return_value.run_in_executor = AsyncMock(side_effect=Exception("Execution failed"))
 
-                assert result.success is False
-                assert "Execution failed" in result.error_message
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                        pr_head_ref="feature-branch",
+                        pr_head_sha="abc123",
+                        pr_base_ref="main",
+                    )
+
+                    assert result.success is False
+                    assert "Execution failed" in result.error_message
+
+    @pytest.mark.asyncio
+    async def test_branch_checkout_success(self):
+        """Test successful PR branch checkout before review."""
+        from core.adw_integration import trigger_review_workflow
+
+        with patch("core.adw_integration.execute_template") as mock_execute:
+            with patch("core.adw_integration.subprocess.run") as mock_run:
+                # Mock git operations sequence
+                git_calls = []
+                def mock_git_run(cmd, **kwargs):
+                    git_calls.append(cmd)
+                    if "rev-parse" in cmd:
+                        return Mock(returncode=0, stdout="main\n", stderr="")
+                    elif "fetch" in cmd and "pull/42/head" in " ".join(cmd):
+                        return Mock(returncode=0, stdout="", stderr="")
+                    elif "checkout" in cmd and "pr-42" in " ".join(cmd):
+                        return Mock(returncode=0, stdout="", stderr="")
+                    elif "reset" in cmd:
+                        return Mock(returncode=0, stdout="", stderr="")
+                    elif "checkout" in cmd and "main" in " ".join(cmd):
+                        return Mock(returncode=0, stdout="", stderr="")
+                    return Mock(returncode=0, stdout="", stderr="")
+
+                mock_run.side_effect = mock_git_run
+
+                mock_response = Mock()
+                mock_response.success = True
+                mock_response.output = "Review completed"
+                mock_response.session_id = "session123"
+
+                with patch("asyncio.get_event_loop") as mock_loop:
+                    mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_response)
+
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                        pr_head_ref="feature-branch",
+                        pr_head_sha="abc123",
+                        pr_base_ref="main",
+                    )
+
+                    assert result.success is True
+                    # Verify git operations were called
+                    assert len(git_calls) > 0
+                    # Should fetch PR branch
+                    assert any("fetch" in " ".join(call) for call in git_calls)
+                    # Should checkout PR branch
+                    assert any("checkout" in " ".join(call) for call in git_calls)
+
+    @pytest.mark.asyncio
+    async def test_branch_checkout_cleanup_on_error(self):
+        """Test that original branch is restored even when review fails."""
+        from core.adw_integration import trigger_review_workflow
+
+        with patch("core.adw_integration.execute_template") as mock_execute:
+            with patch("core.adw_integration.subprocess.run") as mock_run:
+                checkout_calls = []
+                def mock_git_run(cmd, **kwargs):
+                    if "checkout" in cmd:
+                        checkout_calls.append(cmd)
+                    if "rev-parse" in cmd:
+                        return Mock(returncode=0, stdout="main\n", stderr="")
+                    return Mock(returncode=0, stdout="", stderr="")
+
+                mock_run.side_effect = mock_git_run
+                mock_execute.side_effect = Exception("Review failed")
+
+                with patch("asyncio.get_event_loop") as mock_loop:
+                    mock_loop.return_value.run_in_executor = AsyncMock(side_effect=Exception("Review failed"))
+
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                        pr_head_ref="feature-branch",
+                        pr_head_sha="abc123",
+                        pr_base_ref="main",
+                    )
+
+                    assert result.success is False
+                    # Should restore to main branch
+                    assert any("main" in " ".join(call) for call in checkout_calls)
+
+    @pytest.mark.asyncio
+    async def test_git_fetch_failure_fallback(self):
+        """Test fallback to branch name when PR fetch fails."""
+        from core.adw_integration import trigger_review_workflow
+
+        with patch("core.adw_integration.execute_template") as mock_execute:
+            with patch("core.adw_integration.subprocess.run") as mock_run:
+                def mock_git_run(cmd, **kwargs):
+                    if "rev-parse" in cmd:
+                        return Mock(returncode=0, stdout="main\n", stderr="")
+                    elif "fetch" in cmd and "pull/42/head" in " ".join(cmd):
+                        # Fail first fetch
+                        return Mock(returncode=1, stdout="", stderr="Error: not found")
+                    elif "fetch" in cmd and "feature-branch" in " ".join(cmd):
+                        # Succeed on branch name fetch
+                        return Mock(returncode=0, stdout="", stderr="")
+                    elif "checkout" in cmd:
+                        return Mock(returncode=0, stdout="", stderr="")
+                    return Mock(returncode=0, stdout="", stderr="")
+
+                mock_run.side_effect = mock_git_run
+
+                mock_response = Mock()
+                mock_response.success = True
+                mock_response.output = "Review completed"
+                mock_response.session_id = "session123"
+
+                with patch("asyncio.get_event_loop") as mock_loop:
+                    mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_response)
+
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                        pr_head_ref="feature-branch",
+                        pr_head_sha="abc123",
+                        pr_base_ref="main",
+                    )
+
+                    # Should still succeed despite PR fetch failure
+                    assert result.success is True
