@@ -83,6 +83,22 @@ export class FaceDetector {
       const leftEyeLandmarks = leftEyeIndices.map(idx => keypoints[idx]);
       const rightEyeLandmarks = rightEyeIndices.map(idx => keypoints[idx]);
 
+      // Calculate face bounding box
+      const faceBoundingBox = this.getFaceBoundingBox(keypoints);
+
+      // Extract important facial landmarks for visualization
+      // Face outline landmarks (based on MediaPipe Face Mesh)
+      const faceOutlineIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+      const faceOutlineLandmarks = faceOutlineIndices.map(idx => keypoints[idx]);
+
+      // Nose landmarks
+      const noseIndices = [1, 2, 98, 327];
+      const noseLandmarks = noseIndices.map(idx => keypoints[idx]);
+
+      // Mouth landmarks
+      const mouthIndices = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308];
+      const mouthLandmarks = mouthIndices.map(idx => keypoints[idx]);
+
       return {
         faceDetected: true,
         lookingAtScreen,
@@ -90,6 +106,10 @@ export class FaceDetector {
         headPose,
         leftEyeLandmarks,
         rightEyeLandmarks,
+        faceBoundingBox,
+        faceOutlineLandmarks,
+        noseLandmarks,
+        mouthLandmarks,
         keypoints,
       };
     } catch (error) {
@@ -228,6 +248,34 @@ export class FaceDetector {
     const maxY = Math.max(...ys);
 
     const padding = 8; // pixels of padding around the eye
+
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + (padding * 2),
+      height: (maxY - minY) + (padding * 2),
+    };
+  }
+
+  /**
+   * Calculate bounding box around all face keypoints
+   * @param {Array} keypoints - Array of all face keypoints {x, y}
+   * @returns {Object} Bounding box {x, y, width, height}
+   */
+  getFaceBoundingBox(keypoints) {
+    if (!keypoints || keypoints.length === 0) {
+      return null;
+    }
+
+    const xs = keypoints.map(p => p.x);
+    const ys = keypoints.map(p => p.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const padding = 15; // pixels of padding around the face
 
     return {
       x: minX - padding,
