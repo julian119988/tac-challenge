@@ -39,17 +39,33 @@
       "destination": "/apps/frontend/:path*"
     },
     {
-      "source": "/(.*\\.(js|css|json|png|jpg|jpeg|gif|svg|mp4|webm|ico))",
-      "destination": "/apps/frontend/$1"
+      "source": "/:file.js",
+      "destination": "/apps/frontend/:file.js"
     },
     {
-      "source": "/assets/(.*)",
-      "destination": "/apps/frontend/assets/$1"
+      "source": "/:file.css",
+      "destination": "/apps/frontend/:file.css"
+    },
+    {
+      "source": "/:file.json",
+      "destination": "/apps/frontend/:file.json"
+    },
+    {
+      "source": "/:file.mp4",
+      "destination": "/apps/frontend/:file.mp4"
+    },
+    {
+      "source": "/:file.webm",
+      "destination": "/apps/frontend/:file.webm"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/apps/frontend/assets/:path*"
     }
   ],
   "headers": [
     {
-      "source": "/(.*\\.js)",
+      "source": "/:file.js",
       "headers": [
         {
           "key": "Cache-Control",
@@ -62,7 +78,7 @@
       ]
     },
     {
-      "source": "/(.*\\.css)",
+      "source": "/:file.css",
       "headers": [
         {
           "key": "Cache-Control",
@@ -75,7 +91,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(mp4|webm))",
+      "source": "/:file.mp4",
       "headers": [
         {
           "key": "Cache-Control",
@@ -97,7 +113,24 @@
       ]
     },
     {
-      "source": "/(health|webhooks/github)",
+      "source": "/health",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    },
+    {
+      "source": "/webhooks/github",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
