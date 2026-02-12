@@ -86,9 +86,15 @@ def test_config_custom_values(temp_dir):
 # Configuration Validation Tests
 # ============================================================================
 
-def test_config_requires_webhook_secret():
+def test_config_requires_webhook_secret(monkeypatch, tmp_path):
     """Test configuration requires gh_wb_secret."""
     from apps.adw_server.core.config import ServerConfig
+
+    # Ensure GH_WB_SECRET is not set in the environment
+    monkeypatch.delenv("GH_WB_SECRET", raising=False)
+
+    # Change to a directory without .env file to prevent loading from .env
+    monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ValidationError) as exc_info:
         ServerConfig()
