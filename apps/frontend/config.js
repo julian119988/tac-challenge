@@ -28,10 +28,22 @@ export const CONFIG = {
 
   // UI settings
   ui: {
-    statusUpdateInterval: 1000, // milliseconds - update stats every second
+    statusUpdateInterval: 1000, // milliseconds - update stats every second (deprecated, no longer used)
     focusColor: '#4ade80', // green
     distractedColor: '#ef4444', // red
     loadingColor: '#fbbf24', // yellow
+  },
+
+  // Face visualization settings
+  visualization: {
+    faceBoxColor: 'rgba(239, 68, 68, 0.8)', // semi-transparent red
+    faceBoxFillColor: 'rgba(239, 68, 68, 0.1)', // very transparent red fill
+    landmarkColor: 'rgba(239, 68, 68, 0.9)', // semi-transparent red for dots
+    faceBoxLineWidth: 3,
+    eyeLandmarkRadius: 3,
+    noseLandmarkRadius: 3,
+    mouthLandmarkRadius: 3,
+    faceOutlineLandmarkRadius: 2,
   },
 
   // Statistics persistence

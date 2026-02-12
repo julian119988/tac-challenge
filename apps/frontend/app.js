@@ -152,9 +152,9 @@ class CameraManager {
         // Draw video frame to canvas
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw eye detection rectangles if available
-        if (this.latestDetection && this.latestDetection.leftEyeLandmarks && this.latestDetection.rightEyeLandmarks) {
-          this.drawEyeRectangles(this.latestDetection);
+        // Draw face visualization if available
+        if (this.latestDetection && this.latestDetection.faceBoundingBox) {
+          this.drawFaceVisualization(this.latestDetection);
         }
       }
 
@@ -165,28 +165,67 @@ class CameraManager {
   }
 
   /**
-   * Draw rectangles around detected eyes
+   * Draw face visualization with bounding box and landmarks
    */
-  drawEyeRectangles(detection) {
-    const { leftEyeLandmarks, rightEyeLandmarks, lookingAtScreen } = detection;
+  drawFaceVisualization(detection) {
+    const { faceBoundingBox, leftEyeLandmarks, rightEyeLandmarks, noseLandmarks, mouthLandmarks, faceOutlineLandmarks } = detection;
 
-    // Calculate bounding boxes
-    const leftEyeBox = this.getEyeBoundingBox(leftEyeLandmarks);
-    const rightEyeBox = this.getEyeBoundingBox(rightEyeLandmarks);
+    if (!faceBoundingBox) return;
 
-    if (!leftEyeBox || !rightEyeBox) return;
+    // Draw transparent red rectangle around face
+    this.ctx.strokeStyle = CONFIG.visualization.faceBoxColor;
+    this.ctx.fillStyle = CONFIG.visualization.faceBoxFillColor;
+    this.ctx.lineWidth = CONFIG.visualization.faceBoxLineWidth;
 
-    // Set color based on whether user is looking at screen
-    const color = lookingAtScreen ? '#4ade80' : '#ef4444'; // green : red
+    // Draw face bounding box with fill
+    this.ctx.fillRect(faceBoundingBox.x, faceBoundingBox.y, faceBoundingBox.width, faceBoundingBox.height);
+    this.ctx.strokeRect(faceBoundingBox.x, faceBoundingBox.y, faceBoundingBox.width, faceBoundingBox.height);
 
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 3;
+    // Draw landmarks as dots
+    this.ctx.fillStyle = CONFIG.visualization.landmarkColor;
 
-    // Draw left eye rectangle
-    this.ctx.strokeRect(leftEyeBox.x, leftEyeBox.y, leftEyeBox.width, leftEyeBox.height);
+    // Draw eye landmarks
+    if (leftEyeLandmarks) {
+      leftEyeLandmarks.forEach(point => {
+        this.drawLandmarkDot(point, CONFIG.visualization.eyeLandmarkRadius);
+      });
+    }
 
-    // Draw right eye rectangle
-    this.ctx.strokeRect(rightEyeBox.x, rightEyeBox.y, rightEyeBox.width, rightEyeBox.height);
+    if (rightEyeLandmarks) {
+      rightEyeLandmarks.forEach(point => {
+        this.drawLandmarkDot(point, CONFIG.visualization.eyeLandmarkRadius);
+      });
+    }
+
+    // Draw nose landmarks
+    if (noseLandmarks) {
+      noseLandmarks.forEach(point => {
+        this.drawLandmarkDot(point, CONFIG.visualization.noseLandmarkRadius);
+      });
+    }
+
+    // Draw mouth landmarks
+    if (mouthLandmarks) {
+      mouthLandmarks.forEach(point => {
+        this.drawLandmarkDot(point, CONFIG.visualization.mouthLandmarkRadius);
+      });
+    }
+
+    // Draw face outline landmarks (less prominent)
+    if (faceOutlineLandmarks) {
+      faceOutlineLandmarks.forEach(point => {
+        this.drawLandmarkDot(point, CONFIG.visualization.faceOutlineLandmarkRadius);
+      });
+    }
+  }
+
+  /**
+   * Draw a landmark dot at the given point
+   */
+  drawLandmarkDot(point, radius) {
+    this.ctx.beginPath();
+    this.ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+    this.ctx.fill();
   }
 
   /**
@@ -231,184 +270,6 @@ class CameraManager {
 }
 
 /**
- * Distraction Monitor - tracks user attention state
- */
-class DistractionMonitor {
-  constructor(faceDetector, attentionPlayer, cameraManager) {
-    this.faceDetector = faceDetector;
-    this.attentionPlayer = attentionPlayer;
-    this.cameraManager = cameraManager;
-
-    // State tracking
-    this.currentState = 'not-started'; // 'focused', 'distracted', 'intervention', 'not-started'
-    this.lastFaceDetectedTime = Date.now();
-    this.lastLookingAtScreenTime = Date.now();
-    this.animationFrameId = null;
-    this.videoElement = null;
-
-    // Stats
-    this.sessionStartTime = null;
-    this.totalFocusTime = 0;
-    this.distractionCount = 0;
-    this.lastUpdateTime = Date.now();
-  }
-
-  /**
-   * Start monitoring
-   */
-  start(videoElement) {
-    this.sessionStartTime = Date.now();
-    this.lastUpdateTime = Date.now();
-    this.lastFaceDetectedTime = Date.now();
-    this.lastLookingAtScreenTime = Date.now();
-    this.currentState = 'focused';
-    this.videoElement = videoElement;
-
-    // Start continuous detection using requestAnimationFrame
-    this.startContinuousDetection();
-
-    console.log('Distraction monitoring started (realtime detection)');
-  }
-
-  /**
-   * Stop monitoring
-   */
-  stop() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-    this.videoElement = null;
-    this.currentState = 'not-started';
-    console.log('Distraction monitoring stopped');
-  }
-
-  /**
-   * Start continuous detection loop using requestAnimationFrame
-   */
-  startContinuousDetection() {
-    const detectLoop = async () => {
-      // Only continue if monitoring is active
-      if (this.currentState === 'not-started' || !this.videoElement) {
-        return;
-      }
-
-      // Perform detection
-      await this.checkDistraction(this.videoElement);
-
-      // Schedule next frame
-      this.animationFrameId = requestAnimationFrame(detectLoop);
-    };
-
-    // Start the loop
-    this.animationFrameId = requestAnimationFrame(detectLoop);
-  }
-
-  /**
-   * Check for distraction
-   */
-  async checkDistraction(videoElement) {
-    const now = Date.now();
-    const detection = await this.faceDetector.detect(videoElement);
-
-    // Pass detection results to camera manager for visualization
-    if (this.cameraManager) {
-      this.cameraManager.updateDetection(detection);
-    }
-
-    // Update last seen times
-    if (detection.faceDetected) {
-      this.lastFaceDetectedTime = now;
-    }
-
-    if (detection.lookingAtScreen) {
-      this.lastLookingAtScreenTime = now;
-    }
-
-    // Calculate time since last attention
-    const timeSinceLastFace = now - this.lastFaceDetectedTime;
-    const timeSinceLastLooking = now - this.lastLookingAtScreenTime;
-
-    // Determine if distracted
-    const isDistracted =
-      timeSinceLastFace > CONFIG.detection.noFaceTimeout ||
-      timeSinceLastLooking > CONFIG.detection.gazeAwayTimeout;
-
-    // Update state and trigger intervention if needed
-    if (isDistracted && this.currentState === 'focused') {
-      this.onDistractionDetected();
-    } else if (!isDistracted && this.currentState === 'distracted') {
-      this.onFocusRestored();
-    }
-
-    // Update focus time
-    if (this.currentState === 'focused') {
-      const timeSinceLastUpdate = now - this.lastUpdateTime;
-      this.totalFocusTime += timeSinceLastUpdate;
-    }
-
-    this.lastUpdateTime = now;
-  }
-
-  /**
-   * Handle distraction detected
-   */
-  onDistractionDetected() {
-    console.log('Distraction detected!');
-    this.currentState = 'distracted';
-    this.distractionCount++;
-
-    // Play intervention video (commented out for testing eye detection)
-    // this.attentionPlayer.play();
-    console.log('Intervention video disabled for testing - distraction count:', this.distractionCount);
-
-    // Dispatch event
-    this.dispatchEvent('distraction-detected', {
-      distractionCount: this.distractionCount,
-    });
-  }
-
-  /**
-   * Handle focus restored
-   */
-  onFocusRestored() {
-    console.log('Focus restored - auto-closing intervention video');
-    this.currentState = 'focused';
-
-    // Stop intervention video if playing (auto-close)
-    this.attentionPlayer.stop();
-
-    // Dispatch event
-    this.dispatchEvent('focus-restored', {});
-  }
-
-  /**
-   * Get current statistics
-   */
-  getStats() {
-    const now = Date.now();
-    const sessionDuration = this.sessionStartTime ? now - this.sessionStartTime : 0;
-
-    return {
-      state: this.currentState,
-      sessionDuration,
-      totalFocusTime: this.totalFocusTime,
-      distractionCount: this.distractionCount,
-      focusPercentage:
-        sessionDuration > 0 ? (this.totalFocusTime / sessionDuration) * 100 : 0,
-    };
-  }
-
-  /**
-   * Dispatch custom events
-   */
-  dispatchEvent(eventName, detail) {
-    const event = new CustomEvent(eventName, { detail });
-    window.dispatchEvent(event);
-  }
-}
-
-/**
  * Main Application
  */
 class FocusKeeperApp {
@@ -416,14 +277,8 @@ class FocusKeeperApp {
     this.cameraManager = new CameraManager();
     this.faceDetector = new FaceDetector();
     this.attentionPlayer = new AttentionPlayer();
-    this.distractionMonitor = new DistractionMonitor(
-      this.faceDetector,
-      this.attentionPlayer,
-      this.cameraManager
-    );
 
     this.isRunning = false;
-    this.statsIntervalId = null;
   }
 
   /**
@@ -433,10 +288,9 @@ class FocusKeeperApp {
     try {
       // Get UI elements
       const canvas = document.getElementById('camera-canvas');
-      const startBtn = document.getElementById('start-btn');
       const statusElement = document.getElementById('status');
 
-      if (!canvas || !startBtn || !statusElement) {
+      if (!canvas || !statusElement) {
         throw new Error('Required UI elements not found');
       }
 
@@ -451,10 +305,6 @@ class FocusKeeperApp {
       // Check camera API availability
       const supportCheck = this.cameraManager.isSupported();
       if (!supportCheck.supported) {
-        // Disable start button
-        startBtn.disabled = true;
-        startBtn.classList.add('disabled');
-
         // Show warning message
         let warningMessage;
         switch (supportCheck.reason) {
@@ -480,11 +330,9 @@ class FocusKeeperApp {
         return;
       }
 
-      // Setup button event
-      startBtn.addEventListener('click', () => this.toggleSession());
-
-      // Ready
-      this.updateStatus('ready', 'Ready - Click Start to begin');
+      // Auto-start camera on page load
+      this.updateStatus('loading', 'Requesting camera access...');
+      await this.startCamera();
 
       console.log('Focus Keeper App initialized');
     } catch (error) {
@@ -495,65 +343,56 @@ class FocusKeeperApp {
   }
 
   /**
-   * Toggle session start/stop
+   * Start camera and face detection
    */
-  async toggleSession() {
-    if (this.isRunning) {
-      this.stopSession();
-    } else {
-      await this.startSession();
-    }
-  }
-
-  /**
-   * Start a focus session
-   */
-  async startSession() {
+  async startCamera() {
     try {
       // Start camera
       await this.cameraManager.start();
 
-      // Start monitoring
+      // Start continuous face detection
       const videoElement = this.cameraManager.getVideoElement();
-      this.distractionMonitor.start(videoElement);
+      this.startContinuousDetection(videoElement);
 
       // Update UI
       this.isRunning = true;
-      document.getElementById('start-btn').textContent = 'Stop Session';
-      this.updateStatus('focused', 'Focused - Keep your eyes on the screen!');
+      this.updateStatus('focused', 'Camera active - Face detection running');
 
-      // Start stats updates
-      this.startStatsUpdates();
-
-      console.log('Session started');
+      console.log('Camera started and face detection active');
     } catch (error) {
-      console.error('Failed to start session:', error);
-      this.showError('Failed to start: ' + error.message);
+      console.error('Failed to start camera:', error);
+      this.showError('Failed to start camera: ' + error.message);
+      this.updateStatus('error', 'Camera error: ' + error.message);
     }
   }
 
   /**
-   * Stop the focus session
+   * Start continuous face detection loop
    */
-  stopSession() {
-    // Stop monitoring
-    this.distractionMonitor.stop();
+  startContinuousDetection(videoElement) {
+    const detectLoop = async () => {
+      if (!this.isRunning) {
+        return;
+      }
 
-    // Stop camera
-    this.cameraManager.stop();
+      try {
+        // Perform face detection
+        const detection = await this.faceDetector.detect(videoElement);
 
-    // Stop stats updates
-    this.stopStatsUpdates();
+        // Pass detection results to camera manager for visualization
+        if (this.cameraManager) {
+          this.cameraManager.updateDetection(detection);
+        }
+      } catch (error) {
+        console.error('Detection error:', error);
+      }
 
-    // Update UI
-    this.isRunning = false;
-    document.getElementById('start-btn').textContent = 'Start Session';
-    this.updateStatus('ready', 'Session ended - Click Start to begin again');
+      // Schedule next frame
+      requestAnimationFrame(detectLoop);
+    };
 
-    // Save stats
-    this.saveStats();
-
-    console.log('Session stopped');
+    // Start the loop
+    requestAnimationFrame(detectLoop);
   }
 
   /**
@@ -573,70 +412,6 @@ class FocusKeeperApp {
   }
 
   /**
-   * Start periodic stats updates
-   */
-  startStatsUpdates() {
-    this.updateStatsDisplay();
-
-    this.statsIntervalId = setInterval(() => {
-      this.updateStatsDisplay();
-    }, CONFIG.ui.statusUpdateInterval);
-  }
-
-  /**
-   * Stop stats updates
-   */
-  stopStatsUpdates() {
-    if (this.statsIntervalId) {
-      clearInterval(this.statsIntervalId);
-      this.statsIntervalId = null;
-    }
-  }
-
-  /**
-   * Update statistics display
-   */
-  updateStatsDisplay() {
-    const stats = this.distractionMonitor.getStats();
-    const videoStats = this.attentionPlayer.getStats();
-
-    // Update session duration
-    document.getElementById('session-time').textContent = this.formatTime(
-      stats.sessionDuration
-    );
-
-    // Update focus time
-    document.getElementById('focus-time').textContent = this.formatTime(stats.totalFocusTime);
-
-    // Update distraction count
-    document.getElementById('distraction-count').textContent = stats.distractionCount;
-
-    // Update intervention count
-    document.getElementById('intervention-count').textContent = videoStats.interventionCount;
-
-    // Update focus percentage
-    document.getElementById('focus-percentage').textContent =
-      stats.focusPercentage.toFixed(1) + '%';
-
-    // Update status based on current state
-    if (stats.state === 'focused') {
-      this.updateStatus('focused', 'Focused - Great job!');
-    } else if (stats.state === 'distracted') {
-      this.updateStatus('distracted', 'Distracted - Get back to work!');
-    }
-  }
-
-  /**
-   * Format milliseconds to MM:SS
-   */
-  formatTime(ms) {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  /**
    * Show error message
    */
   showError(message) {
@@ -650,34 +425,6 @@ class FocusKeeperApp {
         errorContainer.classList.add('hidden');
       }, 5000);
     }
-  }
-
-  /**
-   * Save statistics to localStorage
-   */
-  saveStats() {
-    if (!CONFIG.storage.persistStats) return;
-
-    const stats = this.distractionMonitor.getStats();
-    const videoStats = this.attentionPlayer.getStats();
-
-    const data = {
-      ...stats,
-      interventionCount: videoStats.interventionCount,
-      savedAt: Date.now(),
-    };
-
-    localStorage.setItem(CONFIG.storage.statsKey, JSON.stringify(data));
-  }
-
-  /**
-   * Load statistics from localStorage
-   */
-  loadStats() {
-    if (!CONFIG.storage.persistStats) return null;
-
-    const data = localStorage.getItem(CONFIG.storage.statsKey);
-    return data ? JSON.parse(data) : null;
   }
 }
 
