@@ -44,10 +44,12 @@ export class AttentionPlayer {
           allow="autoplay; encrypted-media"
           allowfullscreen
         ></iframe>
+        <!-- Issue #33: Removed 'muted' attribute to enable audio playback for skeleton video
+             Browser autoplay policies are handled in playSkeletonVideo() with fallback to muted playback
+             if audio is blocked. User interaction via "Start Session" button satisfies autoplay requirements. -->
         <video
           id="intervention-video"
           autoplay
-          muted
           loop
           style="display: none; width: 100%; height: 100%; object-fit: contain;"
         ></video>
@@ -202,9 +204,20 @@ export class AttentionPlayer {
       video.style.display = 'block';
 
       // Set video source and play
+      // Issue #33: Removed muted attribute to enable audio playback
+      // Browser autoplay policies may block audio on first play without user interaction
+      // The "Start Session" button provides the required user gesture
       video.src = CONFIG.attentionGrabber.videoPath;
+      video.muted = false; // Explicitly unmute for audio playback
       video.play().catch(err => {
-        console.error('Failed to play skeleton video:', err);
+        // Handle autoplay blocking by browser policies
+        if (err.name === 'NotAllowedError') {
+          console.warn('Audio autoplay blocked by browser - playing muted as fallback');
+          video.muted = true;
+          video.play();
+        } else {
+          console.error('Failed to play skeleton video:', err);
+        }
       });
     }
 

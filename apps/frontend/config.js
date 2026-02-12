@@ -45,6 +45,7 @@ export const CONFIG = {
 
   // Face visualization settings
   visualization: {
+    overlayVisible: false, // overlay hidden by default
     faceBoxColor: 'rgba(239, 68, 68, 0.8)', // semi-transparent red
     faceBoxFillColor: 'rgba(239, 68, 68, 0.1)', // very transparent red fill
     landmarkColor: 'rgba(239, 68, 68, 0.9)', // semi-transparent red for dots
@@ -63,7 +64,7 @@ export const CONFIG = {
 
   // Eye tracking configuration
   eyeTracking: {
-    enabled: true,
+    enabled: false,
     modelHyperparams: {
       epochs: 20,
       batchSizeRatio: 0.1, // 10% of training data

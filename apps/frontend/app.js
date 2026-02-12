@@ -173,6 +173,11 @@ class CameraManager {
    * Draw face visualization with bounding box and landmarks
    */
   drawFaceVisualization(detection) {
+    // Check if overlay is visible
+    if (!CONFIG.visualization.overlayVisible) {
+      return;
+    }
+
     const { faceBoundingBox, leftEyeLandmarks, rightEyeLandmarks, noseLandmarks, mouthLandmarks, faceOutlineLandmarks } = detection;
 
     if (!faceBoundingBox) return;
@@ -307,13 +312,6 @@ class FocusKeeperApp {
     this.faceDetector = new FaceDetector();
     this.attentionPlayer = new AttentionPlayer();
 
-    // Eye tracking components (initialized if enabled)
-    this.eyeTracker = null;
-    this.datasetManager = null;
-    this.modelTrainer = null;
-    this.gazePredictor = null;
-    this.uiController = null;
-
     this.isRunning = false;
 
     // Attention grabber state tracking for skeleton video feature (Issue #29)
@@ -372,9 +370,10 @@ class FocusKeeperApp {
         return;
       }
 
-      // Initialize eye tracking if enabled (before starting camera)
-      if (CONFIG.eyeTracking.enabled) {
-        await this.initializeEyeTracking();
+      // Add overlay toggle button event listener
+      const toggleOverlayBtn = document.getElementById('toggle-overlay');
+      if (toggleOverlayBtn) {
+        toggleOverlayBtn.addEventListener('click', () => this.toggleOverlay());
       }
 
       // Auto-start camera on page load
@@ -389,52 +388,6 @@ class FocusKeeperApp {
     }
   }
 
-  /**
-   * Initialize eye tracking components
-   */
-  async initializeEyeTracking() {
-    try {
-      console.log('Initializing eye tracking...');
-
-      // Get eye canvas
-      const eyesCanvas = document.getElementById('eyes');
-      const videoElement = this.cameraManager.getVideoElement();
-
-      if (!eyesCanvas) {
-        console.warn('Eye canvas not found - eye tracking disabled');
-        return;
-      }
-
-      console.log('Eye canvas found, video element:', videoElement);
-
-      // Initialize eye tracker
-      this.eyeTracker = new EyeTracker();
-      this.eyeTracker.initialize(eyesCanvas, videoElement);
-      console.log('Eye tracker initialized');
-
-      // Initialize dataset manager
-      this.datasetManager = new DatasetManager(this.eyeTracker);
-      console.log('Dataset manager initialized');
-
-      // Initialize model trainer
-      this.modelTrainer = new ModelTrainer(this.datasetManager);
-      console.log('Model trainer initialized');
-
-      // Initialize gaze predictor
-      this.gazePredictor = new GazePredictor(this.modelTrainer, this.datasetManager);
-      console.log('Gaze predictor initialized');
-
-      // Initialize UI controller
-      this.uiController = new UIController();
-      this.uiController.initialize(this.datasetManager, this.modelTrainer, this.gazePredictor);
-      console.log('UI controller initialized');
-
-      console.log('✓ Eye tracking fully initialized');
-    } catch (error) {
-      console.error('✗ Failed to initialize eye tracking:', error);
-      console.error('Stack trace:', error.stack);
-    }
-  }
 
   /**
    * Start camera and face detection
@@ -451,11 +404,6 @@ class FocusKeeperApp {
       // Update UI
       this.isRunning = true;
       this.updateStatus('focused', 'Camera active - Face detection running');
-
-      // Notify UI controller that webcam is enabled
-      if (this.uiController) {
-        this.uiController.onWebcamEnabled();
-      }
 
       console.log('Camera started and face detection active');
     } catch (error) {
@@ -492,31 +440,11 @@ class FocusKeeperApp {
           this.cameraManager.updateDetection(detection);
         }
 
-        // Update UI controller based on face detection (always, regardless of eye tracking)
-        if (this.uiController) {
-          if (detection && detection.faceDetected) {
-            this.uiController.onFoundFace();
-          } else {
-            this.uiController.onFaceNotFound();
-          }
-        } else {
-          // UI controller doesn't exist - this is the problem!
-          if (Math.random() < 0.016) {
-            console.warn('UI controller not initialized - buttons will not enable');
-          }
-        }
-
         // Attention grabber logic (Issue #29): trigger skeleton video when user looks away
         // The skeleton video acts as a "jumpscare" attention grabber that:
         // - Appears instantly when user looks away from screen
         // - Closes instantly when user looks back at screen
-        // - Does not trigger during calibration or training to avoid interfering with model training
-        const isInTrainingPhase = this.uiController &&
-                                  (this.uiController.calibrationMode ||
-                                   this.uiController.phase === 'training');
-
-        if (CONFIG.attentionGrabber.enabled && !isInTrainingPhase &&
-            detection && detection.faceDetected) {
+        if (CONFIG.attentionGrabber.enabled && detection && detection.faceDetected) {
           const lookingAtScreen = detection.lookingAtScreen;
 
           // User just started looking away (transition from looking → not looking)
@@ -544,19 +472,14 @@ class FocusKeeperApp {
             }
           }
         }
-        // Handle case when no face is detected or we're in training phase
+        // Handle case when no face is detected
         else if (CONFIG.attentionGrabber.enabled && this.isShowingAttentionGrabber &&
-                 ((!detection || !detection.faceDetected) || isInTrainingPhase)) {
-          // Close skeleton video if no face detected or entered training phase
+                 (!detection || !detection.faceDetected)) {
+          // Close skeleton video if no face detected
           this.attentionPlayer.stop();
           this.isShowingAttentionGrabber = false;
           this.isLookingAway = false;
           this.lookingAwayStartTime = null;
-        }
-
-        // Update eye tracker if enabled and detection successful
-        if (this.eyeTracker && detection && detection.keypoints) {
-          this.eyeTracker.updateFromDetection(detection);
         }
       } catch (error) {
         console.error('Detection error:', error);
@@ -568,6 +491,20 @@ class FocusKeeperApp {
 
     // Start the loop
     requestAnimationFrame(detectLoop);
+  }
+
+  /**
+   * Toggle face overlay visibility
+   */
+  toggleOverlay() {
+    CONFIG.visualization.overlayVisible = !CONFIG.visualization.overlayVisible;
+
+    const toggleBtn = document.getElementById('toggle-overlay');
+    if (toggleBtn) {
+      toggleBtn.textContent = CONFIG.visualization.overlayVisible ? 'Hide Face Overlay' : 'Show Face Overlay';
+    }
+
+    console.log('Overlay visibility:', CONFIG.visualization.overlayVisible);
   }
 
   /**
