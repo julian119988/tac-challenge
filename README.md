@@ -133,8 +133,28 @@ Cuando se crea o actualiza un Pull Request que referencia un issue (con "Closes 
 - Ejecuta los tests del proyecto
 - Captura screenshots si hay cambios en UI (futuro)
 - Publica los resultados en el thread del issue
+- **Toma acciones automáticas basadas en el resultado de la revisión:**
+  - **APPROVED**: Merge automático del PR (configurable)
+  - **CHANGES REQUESTED**: Re-implementación automática con el feedback de la revisión (configurable)
+  - **NEEDS DISCUSSION**: Solo publica resultados, requiere intervención manual
 
 Los PRs deben incluir referencias a issues en la descripción para activar el workflow de revisión automática.
+
+**Configuración de Acciones Post-Revisión:**
+
+Las acciones automáticas pueden configurarse en `.env`:
+- `AUTO_MERGE_ON_APPROVAL=true` - Merge automático cuando el review es aprobado
+- `AUTO_REIMPLEMENT_ON_CHANGES=true` - Re-implementación automática cuando se solicitan cambios
+- `MERGE_METHOD=squash` - Método de merge (squash, merge, rebase)
+- `MAX_REIMPLEMENT_ATTEMPTS=3` - Máximo de intentos de re-implementación para prevenir loops infinitos
+
+**Protección contra Loops:**
+
+El sistema implementa protección contra loops infinitos de re-implementación:
+- Rastrea el número de intentos por issue
+- Después de alcanzar el máximo configurado, requiere intervención manual
+- El contador se resetea cuando un PR se mergea exitosamente
+- Esto previene escenarios donde el agente genera código que falla repetidamente la revisión
 
 ## Desarrollo
 

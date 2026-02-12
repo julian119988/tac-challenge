@@ -39,13 +39,14 @@ import time
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
-from core.adw_integration import (
+from apps.adw_server.core.adw_integration import (
     trigger_chore_workflow,
     trigger_chore_implement_workflow,
     trigger_review_workflow,
     generate_adw_id,
     WorkflowResult,
 )
+from apps.adw_server.core.review_actions import handle_review_results
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -909,16 +910,72 @@ async def handle_pull_request_event(
             except Exception as e:
                 logger.error(f"Failed to post review results to issue #{issue_number}: {e}")
 
-        return {
-            "workflow_triggered": True,
-            "workflow_type": "review",
-            "pr_number": pr_number,
-            "action": action,
-            "adw_id": adw_id,
-            "success": review_result.success,
-            "issue_numbers": issue_numbers,
-            "error_message": review_result.error_message,
-        }
+        # Fetch issue details for re-implementation context
+        original_prompt = ""
+        issue_title_text = ""
+        if issue_numbers:
+            primary_issue = issue_numbers[0]
+            try:
+                logger.info(f"Fetching issue #{primary_issue} details for context")
+                result = subprocess.run(
+                    ["gh", "issue", "view", str(primary_issue), "--json", "title,body", "--repo", repo_full_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if result.returncode == 0:
+                    import json
+                    issue_data = json.loads(result.stdout)
+                    issue_title_text = issue_data.get("title", "")
+                    issue_body = issue_data.get("body", "")
+                    original_prompt = f"# {issue_title_text}\n\n{issue_body}"
+                    logger.info(f"Fetched issue #{primary_issue} context successfully")
+                else:
+                    logger.warning(f"Failed to fetch issue #{primary_issue}: {result.stderr}")
+            except Exception as e:
+                logger.warning(f"Error fetching issue details: {e}")
+
+        # Handle review results (merge, re-implement, or comment)
+        try:
+            logger.info(f"Handling review results for PR #{pr_number}")
+            action_result = await handle_review_results(
+                review_result=review_result,
+                pr_number=pr_number,
+                issue_numbers=issue_numbers,
+                repo_full_name=repo_full_name,
+                original_prompt=original_prompt or f"Implement changes for PR #{pr_number}",
+                issue_title=issue_title_text or f"PR #{pr_number}",
+                model=model,
+                working_dir=working_dir,
+                logger=logger,
+            )
+            logger.info(f"Review action completed: {action_result.get('action')}, success={action_result.get('success')}")
+
+            return {
+                "workflow_triggered": True,
+                "workflow_type": "review",
+                "pr_number": pr_number,
+                "action": action,
+                "adw_id": adw_id,
+                "success": review_result.success,
+                "issue_numbers": issue_numbers,
+                "error_message": review_result.error_message,
+                "review_action": action_result,
+            }
+        except Exception as e:
+            logger.error(f"Error handling review results: {e}", exc_info=True)
+            # Don't fail the whole workflow if action handling fails
+            return {
+                "workflow_triggered": True,
+                "workflow_type": "review",
+                "pr_number": pr_number,
+                "action": action,
+                "adw_id": adw_id,
+                "success": review_result.success,
+                "issue_numbers": issue_numbers,
+                "error_message": review_result.error_message,
+                "review_action_error": str(e),
+            }
 
     except Exception as e:
         logger.error(f"Error executing review workflow for PR #{pr_number}: {e}", exc_info=True)
