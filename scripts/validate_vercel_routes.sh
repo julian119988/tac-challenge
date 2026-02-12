@@ -38,15 +38,23 @@ test_url() {
 
   echo -n "Testing: $description... "
 
-  # Get HTTP response
-  response=$(curl -s -o /dev/null -w "%{http_code}" -L "$url")
+  # Get HTTP response with timeout
+  response=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 "$url" 2>/dev/null)
+  curl_exit=$?
+
+  # Check if curl failed
+  if [ $curl_exit -ne 0 ]; then
+    echo -e "${RED}✗ FAIL${NC} (curl error: exit code $curl_exit)"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+    return
+  fi
 
   if [ "$response" -eq "$expected_status" ]; then
     echo -e "${GREEN}✓ PASS${NC} (HTTP $response)"
 
     # Check for specific header if requested
     if [ -n "$check_header" ]; then
-      header_check=$(curl -s -I -L "$url" | grep -i "$check_header" || echo "")
+      header_check=$(curl -s -I -L --max-time 10 "$url" 2>/dev/null | grep -i "$check_header" || echo "")
       if [ -n "$header_check" ]; then
         echo "  └─ Header found: $header_check"
       else
