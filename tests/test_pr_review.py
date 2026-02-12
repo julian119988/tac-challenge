@@ -353,18 +353,39 @@ class TestTriggerReviewWorkflow:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_response)
 
-                result = await trigger_review_workflow(
-                    pr_number=42,
-                    repo_full_name="owner/repo",
-                    adw_id="test123",
-                    model="sonnet",
-                    working_dir="/tmp",
-                )
+                with patch("subprocess.run") as mock_subprocess:
+                    # Mock git commands for branch checkout flow
+                    def subprocess_side_effect(*args, **kwargs):
+                        mock_result = Mock()
+                        mock_result.returncode = 0
+                        mock_result.stdout = "main\n"
+                        mock_result.stderr = ""
 
-                assert result.success is True
-                assert result.output == "Review completed successfully"
-                assert result.adw_id == "test123"
-                assert "reviewer" in result.output_dir
+                        # Handle different git commands
+                        if args[0][1] == "log":
+                            mock_result.stdout = "abc123 Test commit\n"
+                        elif args[0][1] == "rev-parse":
+                            mock_result.stdout = "main\n"
+
+                        return mock_result
+
+                    mock_subprocess.side_effect = subprocess_side_effect
+
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                    )
+
+                    assert result.success is True
+                    assert result.output == "Review completed successfully"
+                    assert result.adw_id == "test123"
+                    assert "reviewer" in result.output_dir
+
+                    # Verify git operations were called
+                    assert mock_subprocess.call_count >= 4  # rev-parse, fetch, checkout, log (at minimum)
 
     @pytest.mark.asyncio
     async def test_trigger_review_workflow_failure(self):
@@ -377,13 +398,31 @@ class TestTriggerReviewWorkflow:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_in_executor = AsyncMock(side_effect=Exception("Execution failed"))
 
-                result = await trigger_review_workflow(
-                    pr_number=42,
-                    repo_full_name="owner/repo",
-                    adw_id="test123",
-                    model="sonnet",
-                    working_dir="/tmp",
-                )
+                with patch("subprocess.run") as mock_subprocess:
+                    # Mock git commands to succeed initially
+                    def subprocess_side_effect(*args, **kwargs):
+                        mock_result = Mock()
+                        mock_result.returncode = 0
+                        mock_result.stdout = "main\n"
+                        mock_result.stderr = ""
 
-                assert result.success is False
-                assert "Execution failed" in result.error_message
+                        # Handle different git commands
+                        if args[0][1] == "log":
+                            mock_result.stdout = "abc123 Test commit\n"
+                        elif args[0][1] == "rev-parse":
+                            mock_result.stdout = "main\n"
+
+                        return mock_result
+
+                    mock_subprocess.side_effect = subprocess_side_effect
+
+                    result = await trigger_review_workflow(
+                        pr_number=42,
+                        repo_full_name="owner/repo",
+                        adw_id="test123",
+                        model="sonnet",
+                        working_dir="/tmp",
+                    )
+
+                    assert result.success is False
+                    assert "Execution failed" in result.error_message
