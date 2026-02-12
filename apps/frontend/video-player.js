@@ -44,6 +44,13 @@ export class AttentionPlayer {
           allow="autoplay; encrypted-media"
           allowfullscreen
         ></iframe>
+        <video
+          id="intervention-video"
+          autoplay
+          muted
+          loop
+          style="display: none; width: 100%; height: 100%; object-fit: contain;"
+        ></video>
         <div class="intervention-message">
           <h2>Hey! Get back to work!</h2>
           <p>Click the X or press ESC to continue</p>
@@ -123,6 +130,14 @@ export class AttentionPlayer {
       iframe.src = '';
     }
 
+    // Pause and reset video element
+    const video = document.getElementById('intervention-video');
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+      video.src = '';
+    }
+
     // Hide container
     this.videoContainer.classList.add('hidden');
     this.isPlaying = false;
@@ -160,6 +175,57 @@ export class AttentionPlayer {
    */
   resetStats() {
     this.interventionCount = 0;
+  }
+
+  /**
+   * Play the skeleton video for attention grabbing (instant jumpscare)
+   * Issue #29: Displays a skeleton video when user is looking away from screen
+   * The video appears instantly (no fade-in) for maximum attention-grabbing effect
+   * and automatically closes when the user looks back at the screen
+   */
+  playSkeletonVideo() {
+    if (this.isPlaying) {
+      return; // Already playing
+    }
+
+    if (!CONFIG.attentionGrabber.enabled) {
+      return; // Feature disabled
+    }
+
+    // Get video element
+    const video = document.getElementById('intervention-video');
+    const iframe = document.getElementById('intervention-iframe');
+
+    if (video && iframe) {
+      // Hide iframe, show video
+      iframe.style.display = 'none';
+      video.style.display = 'block';
+
+      // Set video source and play
+      video.src = CONFIG.attentionGrabber.videoPath;
+      video.play().catch(err => {
+        console.error('Failed to play skeleton video:', err);
+      });
+    }
+
+    // Show container (instant, no fade)
+    this.videoContainer.classList.remove('hidden');
+    this.isPlaying = true;
+    this.interventionCount++;
+
+    console.log(`Playing skeleton video (attention grabber #${this.interventionCount})`);
+
+    // Dispatch event
+    this.dispatchEvent('attention-grabber-started', {
+      count: this.interventionCount,
+    });
+  }
+
+  /**
+   * Check if video is currently playing
+   */
+  isVideoPlaying() {
+    return this.isPlaying;
   }
 
   /**

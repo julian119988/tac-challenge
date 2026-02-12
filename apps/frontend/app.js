@@ -315,6 +315,12 @@ class FocusKeeperApp {
     this.uiController = null;
 
     this.isRunning = false;
+
+    // Attention grabber state tracking for skeleton video feature (Issue #29)
+    // Tracks when user is looking away to trigger jumpscare skeleton video
+    this.isLookingAway = false;
+    this.lookingAwayStartTime = null;
+    this.isShowingAttentionGrabber = false;
   }
 
   /**
@@ -498,6 +504,54 @@ class FocusKeeperApp {
           if (Math.random() < 0.016) {
             console.warn('UI controller not initialized - buttons will not enable');
           }
+        }
+
+        // Attention grabber logic (Issue #29): trigger skeleton video when user looks away
+        // The skeleton video acts as a "jumpscare" attention grabber that:
+        // - Appears instantly when user looks away from screen
+        // - Closes instantly when user looks back at screen
+        // - Does not trigger during calibration or training to avoid interfering with model training
+        const isInTrainingPhase = this.uiController &&
+                                  (this.uiController.calibrationMode ||
+                                   this.uiController.phase === 'training');
+
+        if (CONFIG.attentionGrabber.enabled && !isInTrainingPhase &&
+            detection && detection.faceDetected) {
+          const lookingAtScreen = detection.lookingAtScreen;
+
+          // User just started looking away (transition from looking → not looking)
+          if (!lookingAtScreen && !this.isLookingAway) {
+            this.isLookingAway = true;
+            this.lookingAwayStartTime = Date.now();
+
+            // Trigger skeleton video immediately (jumpscare effect)
+            if (!this.isShowingAttentionGrabber) {
+              this.attentionPlayer.playSkeletonVideo();
+              this.isShowingAttentionGrabber = true;
+              console.log('User looking away - skeleton video triggered');
+            }
+          }
+          // User is looking back at screen
+          else if (lookingAtScreen && this.isLookingAway) {
+            this.isLookingAway = false;
+            this.lookingAwayStartTime = null;
+
+            // Close skeleton video instantly
+            if (this.isShowingAttentionGrabber) {
+              this.attentionPlayer.stop();
+              this.isShowingAttentionGrabber = false;
+              console.log('User looking back - skeleton video closed');
+            }
+          }
+        }
+        // Handle case when no face is detected or we're in training phase
+        else if (CONFIG.attentionGrabber.enabled && this.isShowingAttentionGrabber &&
+                 ((!detection || !detection.faceDetected) || isInTrainingPhase)) {
+          // Close skeleton video if no face detected or entered training phase
+          this.attentionPlayer.stop();
+          this.isShowingAttentionGrabber = false;
+          this.isLookingAway = false;
+          this.lookingAwayStartTime = null;
         }
 
         // Update eye tracker if enabled and detection successful
