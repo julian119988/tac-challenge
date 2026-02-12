@@ -262,6 +262,36 @@ footer p {
   }
 }
 
+/* Overlay Control Panel */
+.overlay-control-panel {
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.toggle-overlay-btn {
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-overlay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-overlay-btn:active {
+  transform: translateY(0);
+}
+
 /* Eye Tracking UI Styles */
 
 /* Eye Tracking Panel */
