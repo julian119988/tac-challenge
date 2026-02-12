@@ -26,6 +26,15 @@ export const CONFIG = {
     'https://www.youtube.com/embed/y6120QOlsfU?autoplay=1', // Darude - Sandstorm
   ],
 
+  // Attention grabber configuration (Issue #29)
+  // Displays a skeleton video as a "jumpscare" when user looks away from screen
+  attentionGrabber: {
+    enabled: true, // enable/disable skeleton video feature
+    videoPath: 'assets/skeleton-attention.mp4', // path to skeleton video
+    triggerDelay: 0, // milliseconds before triggering (0 for instant jumpscare)
+    instantClose: true, // close immediately when user looks back
+  },
+
   // UI settings
   ui: {
     statusUpdateInterval: 1000, // milliseconds - update stats every second (deprecated, no longer used)
