@@ -35,12 +35,8 @@
       "destination": "/apps/frontend/index.html"
     },
     {
-      "source": "/app/(.*)",
-      "destination": "/apps/frontend/$1"
-    },
-    {
-      "source": "/(.*\\.(js|css|html|json|png|jpg|jpeg|gif|svg|mp4|webm|ico))",
-      "destination": "/apps/frontend/$1"
+      "source": "/app/:path*",
+      "destination": "/apps/frontend/:path*"
     }
   ],
   "headers": [
