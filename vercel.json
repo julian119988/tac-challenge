@@ -13,8 +13,8 @@
     }
   ],
   "env": {
-    "GITHUB_WEBHOOK_SECRET": "@github_webhook_secret",
-    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "GITHUB_WEBHOOK_SECRET": "@github-webhook-secret",
+    "ANTHROPIC_API_KEY": "@anthropic-api-key",
     "ADW_WORKING_DIR": "/tmp",
     "SERVER_HOST": "0.0.0.0",
     "SERVER_PORT": "8000",
