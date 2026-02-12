@@ -121,6 +121,51 @@ El ADW Server es una **herramienta de automatización**, no el servidor principa
 4. Secret: (mismo que `GITHUB_WEBHOOK_SECRET` en `.env`)
 5. Events: Seleccionar "Issues" y "Pull requests"
 
+### Deployment a Vercel
+
+El proyecto incluye configuración para deployment serverless en Vercel:
+
+**Pre-requisitos:**
+- Cuenta de Vercel
+- GitHub repository conectado a Vercel
+
+**Pasos de deployment:**
+
+1. **Conectar repository a Vercel:**
+   - Ir a [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click en "Import Project"
+   - Seleccionar tu GitHub repository
+   - Vercel detectará automáticamente la configuración de `vercel.json`
+
+2. **Configurar variables de entorno en Vercel:**
+
+   Ir a Project Settings → Environment Variables y agregar:
+
+   - `GITHUB_WEBHOOK_SECRET`: Tu secret de webhook (generar con: `python -c "import secrets; print(secrets.token_urlsafe(32))"`)
+   - `ANTHROPIC_API_KEY`: Tu API key de Anthropic (obtener de https://console.anthropic.com/)
+   - `ENVIRONMENT`: `production`
+   - `LOG_LEVEL`: `INFO` (o `WARNING` para producción)
+   - `ADW_DEFAULT_MODEL`: `sonnet`
+   - `CORS_ENABLED`: `true`
+
+3. **Deploy:**
+   - Click en "Deploy"
+   - Vercel construirá y desplegará automáticamente
+   - Obtendrás una URL de deployment (ej: `https://tu-proyecto.vercel.app`)
+
+4. **Configurar GitHub Webhook con URL de Vercel:**
+   - Usar la URL de Vercel como Payload URL: `https://tu-proyecto.vercel.app/`
+   - Configurar el mismo secret que configuraste en Vercel
+
+**Limitaciones en Vercel:**
+
+- **Serverless environment**: Las funciones tienen tiempo de ejecución limitado (10 segundos en plan gratuito, 60 segundos en Pro)
+- **Stateless**: No hay persistencia de archivos entre invocaciones
+- **Working directory**: Los workflows ADW pueden tener limitaciones en el ambiente serverless
+- **Static files**: La app frontend se sirve desde el CDN de Vercel
+
+**Nota**: Para workflows ADW complejos que requieren ejecutar git, crear archivos, o tareas de larga duración, considera usar un deployment tradicional en servidor VPS o contenedor Docker en lugar de serverless.
+
 **Labels soportados:**
 - `implement` / `bug` → Workflow completo (plan + implementación)
 - `feature` → Solo planning

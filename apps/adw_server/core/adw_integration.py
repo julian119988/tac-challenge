@@ -28,6 +28,7 @@ import os
 import sys
 import asyncio
 import logging
+import subprocess
 from typing import Optional, Literal
 from pathlib import Path
 from pydantic import BaseModel
@@ -615,18 +616,94 @@ async def trigger_review_workflow(
         f"model={model}, working_dir={working_dir}"
     )
 
-    # Create the template request
-    request = AgentTemplateRequest(
-        agent_name="reviewer",
-        slash_command="/review",
-        args=[],  # /review doesn't take arguments, it reviews current git diff
-        adw_id=adw_id,
-        model=model,
-        working_dir=working_dir,
-    )
-    logger.info(f"   Created AgentTemplateRequest: agent=reviewer, slash_command=/review")
+    # Store original branch for cleanup
+    original_branch = None
+    pr_branch_name = f"pr-{pr_number}"
 
     try:
+        # Get current branch before checkout
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode == 0:
+            original_branch = result.stdout.strip()
+            logger.info(f"   Current branch: {original_branch}")
+        else:
+            logger.warning(f"Failed to get current branch: {result.stderr}")
+            # Continue anyway, we'll try to review what's checked out
+
+        # Fetch the PR branch from GitHub
+        logger.info(f"   Fetching PR #{pr_number} from GitHub...")
+        result = subprocess.run(
+            ["git", "fetch", "origin", f"pull/{pr_number}/head:{pr_branch_name}"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode != 0:
+            error_msg = f"Failed to fetch PR branch: {result.stderr}"
+            logger.error(error_msg)
+            return WorkflowResult(
+                success=False,
+                output="",
+                session_id=None,
+                adw_id=adw_id,
+                output_dir=os.path.join(working_dir, "agents", adw_id, "reviewer"),
+                plan_path=None,
+                error_message=error_msg,
+            )
+
+        logger.info(f"   ✓ Fetched PR branch: {pr_branch_name}")
+
+        # Checkout the PR branch
+        logger.info(f"   Checking out PR branch: {pr_branch_name}")
+        result = subprocess.run(
+            ["git", "checkout", pr_branch_name],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode != 0:
+            error_msg = f"Failed to checkout PR branch: {result.stderr}"
+            logger.error(error_msg)
+            return WorkflowResult(
+                success=False,
+                output="",
+                session_id=None,
+                adw_id=adw_id,
+                output_dir=os.path.join(working_dir, "agents", adw_id, "reviewer"),
+                plan_path=None,
+                error_message=error_msg,
+            )
+
+        # Log current commit for verification
+        result = subprocess.run(
+            ["git", "log", "-1", "--oneline"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode == 0:
+            logger.info(f"   ✓ Checked out PR branch, current commit: {result.stdout.strip()}")
+
+        # Create the template request
+        request = AgentTemplateRequest(
+            agent_name="reviewer",
+            slash_command="/review",
+            args=[],  # /review doesn't take arguments, it reviews current git diff
+            adw_id=adw_id,
+            model=model,
+            working_dir=working_dir,
+        )
+        logger.info(f"   Created AgentTemplateRequest: agent=reviewer, slash_command=/review")
+
         # Execute in thread pool to avoid blocking async event loop
         logger.info(f"   Executing template in thread pool...")
         loop = asyncio.get_event_loop()
@@ -673,6 +750,37 @@ async def trigger_review_workflow(
             plan_path=None,
             error_message=f"Workflow execution error: {str(e)}",
         )
+
+    finally:
+        # Cleanup: restore original branch and delete temporary PR branch
+        if original_branch:
+            logger.info(f"   Restoring original branch: {original_branch}")
+            result = subprocess.run(
+                ["git", "checkout", original_branch],
+                capture_output=True,
+                text=True,
+                cwd=working_dir,
+            )
+
+            if result.returncode == 0:
+                logger.info(f"   ✓ Restored to branch: {original_branch}")
+            else:
+                logger.warning(f"Failed to restore original branch: {result.stderr}")
+
+        # Delete the temporary PR branch
+        logger.info(f"   Deleting temporary PR branch: {pr_branch_name}")
+        result = subprocess.run(
+            ["git", "branch", "-D", pr_branch_name],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
+        )
+
+        if result.returncode == 0:
+            logger.info(f"   ✓ Deleted temporary branch: {pr_branch_name}")
+        else:
+            # Branch might not exist or already deleted, just log as info
+            logger.info(f"Could not delete PR branch (may not exist): {result.stderr}")
 
 
 def generate_adw_id() -> str:

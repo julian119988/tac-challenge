@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.12"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "env": {
+    "GITHUB_WEBHOOK_SECRET": "@github_webhook_secret",
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "ENVIRONMENT": "production",
+    "LOG_LEVEL": "INFO",
+    "CORS_ENABLED": "true",
+    "ADW_DEFAULT_MODEL": "sonnet",
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true"
+  },
+  "regions": ["iad1"]
+}
