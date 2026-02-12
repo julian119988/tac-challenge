@@ -10,44 +10,37 @@
       "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "/health",
-      "dest": "api/index.py"
+      "source": "/",
+      "destination": "/app",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/index.py"
     },
     {
-      "src": "/health/ready",
-      "dest": "api/index.py"
+      "source": "/health/ready",
+      "destination": "/api/index.py"
     },
     {
-      "src": "/",
-      "methods": ["GET"],
-      "headers": {
-        "Location": "/app"
-      },
-      "status": 308
+      "source": "/webhooks/github",
+      "destination": "/api/index.py"
     },
     {
-      "src": "/",
-      "methods": ["POST"],
-      "dest": "api/index.py"
+      "source": "/app",
+      "destination": "/apps/frontend/index.html"
     },
     {
-      "src": "/webhooks/github",
-      "methods": ["POST"],
-      "dest": "api/index.py"
+      "source": "/app/(.*)",
+      "destination": "/apps/frontend/$1"
     },
     {
-      "src": "/app",
-      "dest": "/apps/frontend/index.html"
-    },
-    {
-      "src": "/(.*\\.(js|css|html|json|png|jpg|jpeg|gif|svg|mp4|webm|ico))",
-      "dest": "/apps/frontend/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
+      "source": "/(.*\\.(js|css|html|json|png|jpg|jpeg|gif|svg|mp4|webm|ico))",
+      "destination": "/apps/frontend/$1"
     }
   ],
   "headers": [
