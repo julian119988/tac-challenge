@@ -45,29 +45,11 @@
   ],
   "headers": [
     {
-      "source": "/apps/frontend/(.*\\.(css|js))",
+      "source": "/apps/frontend/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/apps/frontend/(.*\\.html)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/apps/frontend/(.*\\.(mp4|webm|png|jpg|jpeg|gif|svg|ico))",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=604800"
         }
       ]
     },
