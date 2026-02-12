@@ -128,12 +128,39 @@ El ADW Server es una **herramienta de automatización**, no el servidor principa
 
 ## Desarrollo
 
-### Tests
+### Testing
+
+El proyecto incluye tests comprehensivos para el backend Python y el frontend JavaScript.
+
+**Ejecutar todos los tests:**
 
 ```bash
-# Los tests están en tests/
-ls tests/
+./scripts/run_tests.sh
 ```
+
+**Ejecutar solo tests de Python:**
+
+```bash
+./scripts/run_tests.sh --python-only
+# O directamente:
+uv run pytest tests/ -v
+```
+
+**Ejecutar solo tests de frontend:**
+
+```bash
+./scripts/run_tests.sh --frontend-only
+# O directamente:
+cd apps/frontend && npm test
+```
+
+**Ejecutar tests con coverage:**
+
+```bash
+./scripts/run_tests.sh --coverage
+```
+
+Para más detalles sobre testing, consulta la [Guía de Testing](docs/TESTING.md).
 
 ### Scripts
 
@@ -184,6 +211,7 @@ Siéntete libre de adaptar esta estructura a tus necesidades específicas.
 
 - **ADW README**: `adws/README.md` - Documentación completa de AI Developer Workflows
 - **ADW Server README**: `apps/adw_server/README.md` - Documentación del servidor de automatización
+- **Testing Guide**: `docs/TESTING.md` - Guía completa de testing
 - **Especificaciones**: `specs/` - Planes de implementación
 
 ## Licencia
