@@ -14,6 +14,7 @@ class CameraManager {
     this.canvas = null;
     this.ctx = null;
     this.isActive = false;
+    this.latestDetection = null;
   }
 
   /**
@@ -150,12 +151,75 @@ class CameraManager {
       if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
         // Draw video frame to canvas
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw eye detection rectangles if available
+        if (this.latestDetection && this.latestDetection.leftEyeLandmarks && this.latestDetection.rightEyeLandmarks) {
+          this.drawEyeRectangles(this.latestDetection);
+        }
       }
 
       requestAnimationFrame(render);
     };
 
     render();
+  }
+
+  /**
+   * Draw rectangles around detected eyes
+   */
+  drawEyeRectangles(detection) {
+    const { leftEyeLandmarks, rightEyeLandmarks, lookingAtScreen } = detection;
+
+    // Calculate bounding boxes
+    const leftEyeBox = this.getEyeBoundingBox(leftEyeLandmarks);
+    const rightEyeBox = this.getEyeBoundingBox(rightEyeLandmarks);
+
+    if (!leftEyeBox || !rightEyeBox) return;
+
+    // Set color based on whether user is looking at screen
+    const color = lookingAtScreen ? '#4ade80' : '#ef4444'; // green : red
+
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = 3;
+
+    // Draw left eye rectangle
+    this.ctx.strokeRect(leftEyeBox.x, leftEyeBox.y, leftEyeBox.width, leftEyeBox.height);
+
+    // Draw right eye rectangle
+    this.ctx.strokeRect(rightEyeBox.x, rightEyeBox.y, rightEyeBox.width, rightEyeBox.height);
+  }
+
+  /**
+   * Calculate bounding box around eye landmarks
+   */
+  getEyeBoundingBox(eyeLandmarks) {
+    if (!eyeLandmarks || eyeLandmarks.length === 0) {
+      return null;
+    }
+
+    const xs = eyeLandmarks.map(p => p.x);
+    const ys = eyeLandmarks.map(p => p.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const padding = 8;
+
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      width: (maxX - minX) + (padding * 2),
+      height: (maxY - minY) + (padding * 2),
+    };
+  }
+
+  /**
+   * Update detection results for rendering
+   */
+  updateDetection(detection) {
+    this.latestDetection = detection;
   }
 
   /**
@@ -170,9 +234,10 @@ class CameraManager {
  * Distraction Monitor - tracks user attention state
  */
 class DistractionMonitor {
-  constructor(faceDetector, attentionPlayer) {
+  constructor(faceDetector, attentionPlayer, cameraManager) {
     this.faceDetector = faceDetector;
     this.attentionPlayer = attentionPlayer;
+    this.cameraManager = cameraManager;
 
     // State tracking
     this.currentState = 'not-started'; // 'focused', 'distracted', 'intervention', 'not-started'
@@ -246,6 +311,11 @@ class DistractionMonitor {
     const now = Date.now();
     const detection = await this.faceDetector.detect(videoElement);
 
+    // Pass detection results to camera manager for visualization
+    if (this.cameraManager) {
+      this.cameraManager.updateDetection(detection);
+    }
+
     // Update last seen times
     if (detection.faceDetected) {
       this.lastFaceDetectedTime = now;
@@ -288,8 +358,9 @@ class DistractionMonitor {
     this.currentState = 'distracted';
     this.distractionCount++;
 
-    // Play intervention video
-    this.attentionPlayer.play();
+    // Play intervention video (commented out for testing eye detection)
+    // this.attentionPlayer.play();
+    console.log('Intervention video disabled for testing - distraction count:', this.distractionCount);
 
     // Dispatch event
     this.dispatchEvent('distraction-detected', {
@@ -347,7 +418,8 @@ class FocusKeeperApp {
     this.attentionPlayer = new AttentionPlayer();
     this.distractionMonitor = new DistractionMonitor(
       this.faceDetector,
-      this.attentionPlayer
+      this.attentionPlayer,
+      this.cameraManager
     );
 
     this.isRunning = false;
