@@ -146,8 +146,55 @@ When a Pull Request is created or updated that references an issue (using "Close
    - Test results
    - Approval status
    - Link to PR
+5. **Take automated actions based on review status:**
+   - **APPROVED:** Automatically merge the PR (if enabled)
+   - **CHANGES REQUESTED:** Automatically trigger re-implementation with review feedback (if enabled)
+   - **NEEDS DISCUSSION:** Post results only, require manual intervention
 
 **Note:** PRs without issue references will not trigger the review workflow. This ensures reviews are posted to the appropriate issue threads.
+
+**Automated Post-Review Actions:**
+
+The system can automatically handle review results:
+
+- **Auto-Merge on Approval:**
+  - When a review is APPROVED, the PR is automatically merged
+  - Configurable via `AUTO_MERGE_ON_APPROVAL` environment variable
+  - Uses configured merge method (`MERGE_METHOD`: squash, merge, or rebase)
+  - Posts success/failure comment to the issue thread
+  - Resets re-implementation attempt counter on successful merge
+
+- **Auto-Reimplement on Changes:**
+  - When a review has CHANGES REQUESTED, a new implementation cycle starts automatically
+  - Configurable via `AUTO_REIMPLEMENT_ON_CHANGES` environment variable
+  - Creates enhanced prompt with original issue + review feedback
+  - Includes critical, moderate, and minor issues from review
+  - Includes recommendations from review
+  - Posts re-implementation status to issue thread
+
+- **Loop Protection:**
+  - Tracks re-implementation attempts per issue
+  - Maximum attempts configurable via `MAX_REIMPLEMENT_ATTEMPTS` (default: 3)
+  - After max attempts, requires manual intervention
+  - Prevents infinite loops where agent repeatedly generates failing code
+  - Counter resets when PR is successfully merged
+
+**Configuration:**
+
+Set these environment variables in `.env`:
+```bash
+# Enable/disable automatic merge on approved reviews
+AUTO_MERGE_ON_APPROVAL=true
+
+# Enable/disable automatic re-implementation on requested changes
+AUTO_REIMPLEMENT_ON_CHANGES=true
+
+# PR merge method (squash, merge, rebase)
+MERGE_METHOD=squash
+
+# Maximum re-implementation attempts per issue
+MAX_REIMPLEMENT_ATTEMPTS=3
+```
 
 ## Development
 
@@ -234,6 +281,57 @@ See `.env.example` for complete list. Key variables:
 - Ensure running from project root with correct `PYTHONPATH`
 - Check all dependencies installed: `pip install -r requirements.txt`
 - Verify Python path includes project root
+
+### Automatic merge failures
+
+**Common causes:**
+- **Merge conflicts:** PR branch conflicts with base branch
+  - Solution: Resolve conflicts manually or update PR branch
+- **Required checks not passing:** Branch protection rules require passing checks
+  - Solution: Wait for checks to pass or update branch protection rules
+- **GitHub permissions:** Token lacks `repo` write access
+  - Solution: Verify `GITHUB_PAT` token has correct permissions
+- **PR not in mergeable state:** Draft PR, closed PR, or already merged
+  - Solution: Check PR status on GitHub
+
+**Debug steps:**
+1. Check server logs for merge error messages
+2. Verify PR is mergeable on GitHub web interface
+3. Test merge manually using `gh pr merge` command
+4. Check GitHub token permissions: `gh auth status`
+
+### Re-implementation loops
+
+**Symptoms:**
+- Same issue repeatedly triggers re-implementation
+- Max attempts warning appears in issue comments
+- Agent generates similar code that fails review repeatedly
+
+**Solutions:**
+- Review previous implementation attempts to identify pattern
+- Check if requirements are clear and achievable
+- Adjust `MAX_REIMPLEMENT_ATTEMPTS` if needed (default: 3)
+- Close and re-open issue to reset counter
+- Consider manual implementation for complex issues
+
+**Prevention:**
+- Write clear, specific issue descriptions
+- Include acceptance criteria in issues
+- Review auto-generated plans before implementation
+- Use `NEEDS DISCUSSION` status for ambiguous cases
+
+### Review workflow not posting results
+
+**Common causes:**
+- PR doesn't reference an issue (no "Closes #N" in description)
+- GitHub token lacks permissions to post comments
+- Rate limiting on GitHub API
+
+**Solutions:**
+- Add issue reference to PR description: "Closes #42"
+- Check GitHub token permissions
+- Review server logs for API errors
+- Wait and retry if rate limited
 
 ## Logs
 

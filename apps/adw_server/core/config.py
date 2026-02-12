@@ -84,6 +84,26 @@ class ServerConfig(BaseSettings):
         description="Deployment environment (development, staging, production)"
     )
 
+    # Review action settings
+    auto_merge_on_approval: bool = Field(
+        default=True,
+        description="Automatically merge PRs when review is approved"
+    )
+    auto_reimplement_on_changes: bool = Field(
+        default=True,
+        description="Automatically trigger re-implementation when review requests changes"
+    )
+    merge_method: str = Field(
+        default="squash",
+        description="PR merge method (squash, merge, rebase)"
+    )
+    max_reimplement_attempts: int = Field(
+        default=3,
+        description="Maximum re-implementation attempts per issue to prevent loops",
+        ge=1,
+        le=10
+    )
+
     @field_validator("github_webhook_secret")
     @classmethod
     def validate_webhook_secret(cls, v: str) -> str:
@@ -145,6 +165,18 @@ class ServerConfig(BaseSettings):
                 f"Invalid log level: {v}. Must be one of {valid_levels}"
             )
         return v_upper
+
+    @field_validator("merge_method")
+    @classmethod
+    def validate_merge_method(cls, v: str) -> str:
+        """Validate merge method is one of the supported methods."""
+        valid_methods = ["squash", "merge", "rebase"]
+        v_lower = v.lower()
+        if v_lower not in valid_methods:
+            raise ValueError(
+                f"Invalid merge method: {v}. Must be one of {valid_methods}"
+            )
+        return v_lower
 
     def get_absolute_static_path(self) -> str:
         """Get absolute path to static files directory.
