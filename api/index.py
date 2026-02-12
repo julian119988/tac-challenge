@@ -23,22 +23,22 @@ import sys
 import os
 
 # Set up Python path for imports to work in Vercel's serverless environment
-# Vercel's working directory is the project root, but we need to ensure
-# both the project root and adw_server are in the path
+# This must happen before any app imports
+# Add project root and adw_server to sys.path using centralized utility
 
-# Get the absolute path to the project root (parent of api/ directory)
+# Bootstrap import: Add adw_server to path to import serverless_utils
 current_file = os.path.abspath(__file__)
 api_dir = os.path.dirname(current_file)
 project_root = os.path.dirname(api_dir)
-
-# Add project root first
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-# Add adw_server directory so core modules can be imported directly
 adw_server_dir = os.path.join(project_root, "apps", "adw_server")
 if adw_server_dir not in sys.path:
     sys.path.insert(0, adw_server_dir)
+
+# Now we can import the centralized path setup utility
+from core.serverless_utils import setup_import_paths
+
+# Configure import paths consistently
+setup_import_paths()
 
 # Import the FastAPI app instance
 # This import will trigger config loading, which now handles serverless environments

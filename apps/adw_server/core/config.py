@@ -9,9 +9,21 @@ See .env.example for required configuration.
 """
 
 import os
+import logging
+from pathlib import Path
 from typing import Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .serverless_utils import is_serverless_environment
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
+
+# Project root path - computed once at module load time
+# This file is at: apps/adw_server/core/config.py
+# Project root is 4 levels up: core -> adw_server -> apps -> project_root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class ServerConfig(BaseSettings):
@@ -127,27 +139,46 @@ class ServerConfig(BaseSettings):
 
         In serverless environments (like Vercel), we may need to create
         the directory at runtime since it doesn't exist at config load time.
+        Only /tmp is writable in serverless environments.
         """
         abs_path = os.path.abspath(v)
+        serverless = is_serverless_environment()
 
-        # In production/serverless, try to create the directory if it doesn't exist
-        if not os.path.isdir(abs_path):
-            # Check if we're in a serverless environment (Vercel uses /tmp)
-            is_serverless = abs_path.startswith('/tmp') or os.environ.get('VERCEL') == '1'
+        logger.debug(f"Validating working directory: {abs_path} (serverless={serverless})")
 
-            if is_serverless:
-                # In serverless, just return the path - it will be created when needed
-                try:
-                    os.makedirs(abs_path, exist_ok=True)
-                except Exception:
-                    # If creation fails, just log and continue - directory might be created later
-                    pass
+        # Check if directory already exists
+        if os.path.isdir(abs_path):
+            logger.info(f"Working directory exists: {abs_path}")
+            return abs_path
+
+        # Directory doesn't exist - try to create it
+        if serverless:
+            # In serverless environments, only /tmp is writable
+            logger.info(
+                f"Serverless environment detected. Attempting to create working directory: {abs_path}"
+            )
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                logger.info(f"Successfully created working directory: {abs_path}")
                 return abs_path
-            else:
-                # In non-serverless, require the directory to exist
+            except Exception as e:
+                # Log the error but don't fail - directory might be created later by the application
+                logger.warning(
+                    f"Failed to create working directory in serverless environment: {abs_path}. "
+                    f"Error: {e}. Directory will be created on first use if needed."
+                )
+                return abs_path
+        else:
+            # In non-serverless environments, require the directory to exist or be creatable
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                logger.info(f"Created working directory: {abs_path}")
+                return abs_path
+            except Exception as e:
+                logger.error(f"Failed to create working directory: {abs_path}. Error: {e}")
                 raise ValueError(
-                    f"ADW working directory does not exist: {abs_path}. "
-                    "Please provide a valid directory path."
+                    f"ADW working directory does not exist and could not be created: {abs_path}. "
+                    f"Error: {e}"
                 )
 
         return abs_path
@@ -158,43 +189,54 @@ class ServerConfig(BaseSettings):
         """Validate that static files directory exists or skip in serverless.
 
         In serverless environments, static files may not be available or needed,
-        so we make this validation more lenient.
+        so we make this validation more lenient. Vercel typically handles static
+        files separately from the application runtime.
         """
-        # Convert to absolute path relative to working directory
+        # Convert relative paths to absolute paths using PROJECT_ROOT
         if not os.path.isabs(v):
-            # Get the project root (parent of apps directory)
-            current_file = os.path.abspath(__file__)
-            # Navigate up from config.py -> core -> adw_server -> apps -> project_root
-            core_dir = os.path.dirname(current_file)
-            adw_server_dir = os.path.dirname(core_dir)
-            apps_dir = os.path.dirname(adw_server_dir)
-            project_root = os.path.dirname(apps_dir)
-            v = os.path.join(project_root, v)
+            v = str(PROJECT_ROOT / v)
 
         abs_path = os.path.abspath(v)
+        serverless = is_serverless_environment()
 
-        # Check if we're in a serverless environment
-        is_serverless = abs_path.startswith('/tmp') or os.environ.get('VERCEL') == '1'
+        logger.debug(f"Validating static directory: {abs_path} (serverless={serverless})")
 
-        if not os.path.isdir(abs_path):
-            if is_serverless:
-                # In serverless, static files might not be available - that's OK
-                # Just create the directory if possible, but don't fail if we can't
-                try:
-                    os.makedirs(abs_path, exist_ok=True)
-                except Exception:
-                    # Ignore errors in serverless - static files may not be needed
-                    pass
+        # Check if directory already exists
+        if os.path.isdir(abs_path):
+            logger.info(f"Static files directory exists: {abs_path}")
+            return abs_path
+
+        # Directory doesn't exist - handle based on environment
+        if serverless:
+            # In serverless, static files are typically not served from the application
+            # Vercel handles static files separately via their CDN
+            logger.info(
+                f"Serverless environment detected. Static files directory does not exist: {abs_path}. "
+                "This is expected in serverless environments where static files are served separately."
+            )
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                logger.info(f"Created static files directory: {abs_path}")
+            except Exception as e:
+                # In serverless, it's acceptable if we can't create the directory
+                # Static files may not be needed or may be read-only filesystem
+                logger.warning(
+                    f"Could not create static files directory in serverless environment: {abs_path}. "
+                    f"Error: {e}. This is acceptable if static files are served separately."
+                )
+            return abs_path
+        else:
+            # In non-serverless environments, try to create the directory
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                logger.info(f"Created static files directory: {abs_path}")
                 return abs_path
-            else:
-                # In non-serverless, try to create it
-                try:
-                    os.makedirs(abs_path, exist_ok=True)
-                except Exception as e:
-                    raise ValueError(
-                        f"Static files directory does not exist and could not be created: {abs_path}. "
-                        f"Error: {e}"
-                    )
+            except Exception as e:
+                logger.error(f"Failed to create static files directory: {abs_path}. Error: {e}")
+                raise ValueError(
+                    f"Static files directory does not exist and could not be created: {abs_path}. "
+                    f"Error: {e}"
+                )
 
         return abs_path
 
@@ -257,7 +299,17 @@ def get_config() -> ServerConfig:
     """
     global _config
     if _config is None:
+        serverless = is_serverless_environment()
+        logger.info(
+            f"Loading configuration (serverless={serverless}, environment={os.environ.get('ENVIRONMENT', 'development')})"
+        )
         _config = ServerConfig()
+        logger.info(
+            f"Configuration loaded successfully. "
+            f"Working dir: {_config.adw_working_dir}, "
+            f"Static dir: {_config.static_files_dir}, "
+            f"Environment: {_config.environment}"
+        )
     return _config
 
 

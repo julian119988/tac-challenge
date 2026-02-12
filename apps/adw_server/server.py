@@ -46,7 +46,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
-# Add adw_server directory to path so core modules can be imported
+# Import path setup is handled by api/index.py in serverless environments
+# In local development, import paths are typically already correct
+# Only set up paths if needed (not already in sys.path)
 adw_server_dir = os.path.dirname(os.path.abspath(__file__))
 if adw_server_dir not in sys.path:
     sys.path.insert(0, adw_server_dir)
