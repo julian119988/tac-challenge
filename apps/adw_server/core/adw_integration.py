@@ -28,6 +28,7 @@ import os
 import sys
 import asyncio
 import logging
+import subprocess
 from typing import Optional, Literal
 from pathlib import Path
 from pydantic import BaseModel
@@ -576,6 +577,9 @@ async def trigger_review_workflow(
     adw_id: Optional[str] = None,
     model: Literal["sonnet", "opus"] = "sonnet",
     working_dir: Optional[str] = None,
+    pr_head_ref: Optional[str] = None,
+    pr_head_sha: Optional[str] = None,
+    pr_base_ref: Optional[str] = None,
 ) -> WorkflowResult:
     """Trigger a PR review workflow.
 
@@ -588,6 +592,9 @@ async def trigger_review_workflow(
         adw_id: Unique identifier for this workflow (generated if not provided)
         model: Claude model to use (sonnet or opus)
         working_dir: Working directory for workflow execution (default: current dir)
+        pr_head_ref: PR branch name (head ref)
+        pr_head_sha: PR commit SHA
+        pr_base_ref: Target branch (base ref)
 
     Returns:
         WorkflowResult with success status, output, and review details
@@ -596,7 +603,10 @@ async def trigger_review_workflow(
         result = await trigger_review_workflow(
             pr_number=42,
             repo_full_name="myorg/myrepo",
-            model="sonnet"
+            model="sonnet",
+            pr_head_ref="feature-branch",
+            pr_head_sha="abc123",
+            pr_base_ref="main"
         )
         if result.success:
             print(f"Review completed: {result.output}")
@@ -614,6 +624,90 @@ async def trigger_review_workflow(
         f"pr_number={pr_number}, repo={repo_full_name}, "
         f"model={model}, working_dir={working_dir}"
     )
+
+    # Track original branch for restoration
+    original_branch = None
+
+    # Checkout PR branch if branch information is provided
+    if pr_number and working_dir:
+        logger.info(f"   Checking out PR branch for review...")
+        try:
+            # Save current branch
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=working_dir,
+            )
+            if result.returncode == 0:
+                original_branch = result.stdout.strip()
+                logger.info(f"   Current branch: {original_branch}")
+
+            # Fetch the PR from origin using GitHub's PR fetch mechanism
+            # This is more reliable than fetching by branch name
+            logger.info(f"   Fetching PR #{pr_number} from origin...")
+            result = subprocess.run(
+                ["git", "fetch", "origin", f"pull/{pr_number}/head:pr-{pr_number}"],
+                capture_output=True,
+                text=True,
+                cwd=working_dir,
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"   Failed to fetch PR branch: {result.stderr}")
+                # Try alternative: fetch by branch name if provided
+                if pr_head_ref:
+                    logger.info(f"   Trying alternative: fetch by branch name {pr_head_ref}")
+                    result = subprocess.run(
+                        ["git", "fetch", "origin", pr_head_ref],
+                        capture_output=True,
+                        text=True,
+                        cwd=working_dir,
+                    )
+                    if result.returncode == 0:
+                        # Checkout the fetched branch
+                        result = subprocess.run(
+                            ["git", "checkout", pr_head_ref],
+                            capture_output=True,
+                            text=True,
+                            cwd=working_dir,
+                        )
+                        if result.returncode == 0:
+                            logger.info(f"   ✓ Checked out branch: {pr_head_ref}")
+                        else:
+                            logger.warning(f"   Failed to checkout {pr_head_ref}: {result.stderr}")
+            else:
+                # Checkout the PR branch we just fetched
+                logger.info(f"   Checking out pr-{pr_number}...")
+                result = subprocess.run(
+                    ["git", "checkout", f"pr-{pr_number}"],
+                    capture_output=True,
+                    text=True,
+                    cwd=working_dir,
+                )
+
+                if result.returncode == 0:
+                    logger.info(f"   ✓ Successfully checked out pr-{pr_number}")
+
+                    # Optionally reset to specific SHA if provided
+                    if pr_head_sha:
+                        logger.info(f"   Resetting to commit {pr_head_sha[:8]}...")
+                        result = subprocess.run(
+                            ["git", "reset", "--hard", pr_head_sha],
+                            capture_output=True,
+                            text=True,
+                            cwd=working_dir,
+                        )
+                        if result.returncode == 0:
+                            logger.info(f"   ✓ Reset to {pr_head_sha[:8]}")
+                        else:
+                            logger.warning(f"   Failed to reset to SHA: {result.stderr}")
+                else:
+                    logger.warning(f"   Failed to checkout pr-{pr_number}: {result.stderr}")
+
+        except Exception as e:
+            logger.warning(f"   Error during branch checkout: {e}")
+            # Continue anyway - review might still work if code is already present
 
     # Create the template request
     request = AgentTemplateRequest(
@@ -673,6 +767,24 @@ async def trigger_review_workflow(
             plan_path=None,
             error_message=f"Workflow execution error: {str(e)}",
         )
+
+    finally:
+        # Restore original branch if we changed it
+        if original_branch and working_dir:
+            logger.info(f"   Restoring original branch: {original_branch}")
+            try:
+                result = subprocess.run(
+                    ["git", "checkout", original_branch],
+                    capture_output=True,
+                    text=True,
+                    cwd=working_dir,
+                )
+                if result.returncode == 0:
+                    logger.info(f"   ✓ Restored to {original_branch}")
+                else:
+                    logger.warning(f"   Failed to restore branch: {result.stderr}")
+            except Exception as e:
+                logger.warning(f"   Error restoring branch: {e}")
 
 
 def generate_adw_id() -> str:
