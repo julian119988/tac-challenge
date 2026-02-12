@@ -1,110 +1,108 @@
 # Focus Keeper - Anti-Procrastination App
 
-**Focus Keeper** es una aplicación web de anti-procrastinación que utiliza la cámara de tu dispositivo para detectar cuando estás distraído y reproduce videos de atención para mantenerte enfocado. Este proyecto fue construido completamente usando **Tactical Agentic Coding (TAC)** - demostrando cómo los agentes de IA pueden desarrollar aplicaciones complejas de forma autónoma.
+**Focus Keeper** is an anti-procrastination web application that uses your device's camera to detect when you're distracted and plays attention videos to keep you focused. This project was built entirely using **Tactical Agentic Coding (TAC)** - demonstrating how AI agents can autonomously develop complex applications.
 
-## ¿Qué es Focus Keeper?
+## What is Focus Keeper?
 
-Focus Keeper es una aplicación de seguimiento de atención basada en navegador que:
+Focus Keeper is a browser-based attention tracking application that:
 
-- **Detecta cuando estás distraído** usando machine learning para reconocimiento facial
-- **Reproduce videos de atención** cuando detecta que has dejado de enfocarte
-- **Procesa todo localmente** en tu navegador - sin transmisión de datos, privacidad primero
-- **Rastrea estadísticas de sesión** incluyendo tiempo de enfoque, distracciones y puntaje de productividad
-- **Funciona completamente en el cliente** - no requiere procesamiento ML en el backend
+- **Detects when you're distracted** using machine learning for facial recognition
+- **Plays attention videos** when it detects you've stopped focusing
+- **Processes everything locally** in your browser - no data transmission, privacy first
+- **Works completely on the client** - no backend ML processing required
 
-**Construido usando Tactical Agentic Coding**: Este proyecto demuestra TAC en acción - un paradigma de desarrollo donde los patrones de ingeniería se templetizan y los agentes de IA aprenden a operar el código base, escalando el impacto a través del cómputo en lugar de programación directa.
+**Built using Tactical Agentic Coding**: This project demonstrates TAC in action - a development paradigm where engineering patterns are templated and AI agents learn to operate the codebase, scaling impact through computation rather than direct programming.
 
-## Tecnologías Utilizadas
+## Technologies Used
 
 - **Frontend**: Vanilla JavaScript, TensorFlow.js, MediaPipe Face Mesh
 - **Backend**: Python, FastAPI, Uvicorn
-- **IA/ML**: Claude Sonnet (via Anthropic API), TensorFlow.js para detección facial
+- **AI/ML**: Claude Sonnet (via Anthropic API), TensorFlow.js for face detection
 - **Deployment**: Vercel serverless functions
 - **Testing**: Pytest (Python), Jest (JavaScript)
 - **CI/CD**: GitHub webhooks, automated workflows
 - **Tools**: uv (Python package management), gh CLI (GitHub operations)
 
-## Características de Focus Keeper
+## Focus Keeper Features
 
-### Características Principales
+### Main Features
 
-- **Detección facial en tiempo real**: Utiliza TensorFlow.js con MediaPipe Face Mesh para detectar tu rostro y rastrear tu mirada
-- **Monitoreo de distracciones**: Detecta automáticamente cuando miras lejos de la pantalla o abandonas tu asiento
-- **Intervenciones de atención**: Reproduce videos atractivos cuando se detecta distracción para captar tu atención
-- **Estadísticas de sesión**: Rastrea tiempo de enfoque, distracciones y productividad general
-- **Diseño que prioriza la privacidad**: Todo el procesamiento ocurre localmente en tu navegador - ningún video se almacena o transmite
-- **No requiere backend**: Se ejecuta completamente del lado del cliente sin procesamiento ML en el servidor
+- **Real-time face detection**: Uses TensorFlow.js with MediaPipe Face Mesh to detect your face and track your gaze
+- **Distraction monitoring**: Automatically detects when you look away from the screen or leave your seat
+- **Attention interventions**: Plays engaging videos when distraction is detected to capture your attention
+- **Privacy-first design**: All processing happens locally in your browser - no video is stored or transmitted
+- **No backend required**: Runs completely client-side without server ML processing
 
-### Compatibilidad de Navegadores
+### Browser Compatibility
 
-Funciona mejor en navegadores modernos con soporte WebRTC y WebGL:
+Works best on modern browsers with WebRTC and WebGL support:
 
-- **Chrome** (recomendado) - v90+
+- **Chrome** (recommended) - v90+
 - **Firefox** - v88+
 - **Safari** - v14+
 - **Edge** - v90+
 
-**Requisitos**: Permisos de acceso a la cámara, JavaScript habilitado, soporte WebGL
+**Requirements**: Camera access permissions, JavaScript enabled, WebGL support
 
-Para más detalles sobre Focus Keeper, consulta el [README del Frontend](apps/frontend/README.md).
+For more details about Focus Keeper, see the [Frontend README](apps/frontend/README.md).
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 tac-challenge/
-├── .claude/              # Configuración y comandos de Claude
-├── adws/                 # AI Developer Workflows - workflows de IA para automatización
-│   ├── adw_modules/      # Módulos core (agent, github, etc.)
-│   └── adw_*.py          # Scripts de workflows
-├── apps/                 # Capa de aplicación - código de la aplicación
-│   ├── adw_server/       # Servidor de automatización ADW
-│   │   ├── core/         # Módulos core (config, handlers, integration)
-│   │   ├── server.py     # Aplicación FastAPI
-│   │   └── main.py       # Punto de entrada
-│   └── frontend/         # Focus Keeper - aplicación anti-procrastinación
-│       ├── index.html    # Aplicación web principal
-│       ├── app.js        # Lógica de la aplicación
-│       ├── face-detection.js  # Detección facial y rastreo de mirada
-│       ├── video-player.js    # Manejo de videos de intervención
-│       └── test/         # Tests del frontend (Jest)
-├── api/                  # Vercel deployment - funciones serverless
-├── docs/                 # Documentación adicional
-│   └── TESTING.md        # Guía completa de testing
-├── specs/                # Especificaciones de implementación - planes para agentes
-├── scripts/              # Scripts de inicio y utilidades
-├── tests/                # Tests del backend Python (Pytest)
-├── .env.example          # Template de configuración
-├── requirements.txt      # Dependencias Python
-├── vercel.json           # Configuración de deployment Vercel
-└── VERCEL_DEPLOYMENT.md  # Guía de deployment
+├── .claude/              # Claude configuration and commands
+├── adws/                 # AI Developer Workflows - AI workflows for automation
+│   ├── adw_modules/      # Core modules (agent, github, etc.)
+│   └── adw_*.py          # Workflow scripts
+├── apps/                 # Application layer - application code
+│   ├── adw_server/       # ADW automation server
+│   │   ├── core/         # Core modules (config, handlers, integration)
+│   │   ├── server.py     # FastAPI application
+│   │   └── main.py       # Entry point
+│   └── frontend/         # Focus Keeper - anti-procrastination application
+│       ├── index.html    # Main web application
+│       ├── app.js        # Application logic
+│       ├── face-detection.js  # Face detection and gaze tracking
+│       ├── video-player.js    # Intervention video handling
+│       └── test/         # Frontend tests (Jest)
+├── api/                  # Vercel deployment - serverless functions
+├── docs/                 # Additional documentation
+│   └── TESTING.md        # Complete testing guide
+├── specs/                # Implementation specifications - plans for agents
+├── scripts/              # Startup and utility scripts
+├── tests/                # Python backend tests (Pytest)
+├── .env.example          # Configuration template
+├── requirements.txt      # Python dependencies
+├── vercel.json           # Vercel deployment configuration
+└── VERCEL_DEPLOYMENT.md  # Deployment guide
 ```
 
-## Quick Start - Ejecutar la Aplicación
+## Quick Start - Running the Application
 
-### 1. Configurar entorno
+### 1. Setup Environment
 
 ```bash
-# Copiar template de configuración
+# Copy configuration template
 cp apps/adw_server/.env.example .env
 
-# Editar .env y configurar:
-# - GH_WB_SECRET (para webhooks de GitHub)
-# - ANTHROPIC_API_KEY (para workflows ADW)
+# Edit .env and configure:
+# - GH_WB_SECRET (for GitHub webhooks)
+# - ANTHROPIC_API_KEY (for ADW workflows)
 ```
 
-### 2. Iniciar el Servidor
+### 2. Start the Server
 
-El servidor FastAPI sirve tanto la aplicación Focus Keeper como el sistema de automatización ADW:
+The FastAPI server serves both the Focus Keeper application and the ADW automation system:
 
 ```bash
-# Desde el root del proyecto
+# From the project root
 ./scripts/start_webhook_server.sh
 ```
 
-**Métodos alternativos:**
+**Alternative methods:**
 
 <details>
-<summary>Usando uv (recomendado - maneja dependencias automáticamente)</summary>
+<summary>Using uv (recommended - handles dependencies automatically)</summary>
 
 ```bash
 PYTHONPATH=. uv run \
@@ -118,7 +116,7 @@ PYTHONPATH=. uv run \
 </details>
 
 <details>
-<summary>Usando Python directamente</summary>
+<summary>Using Python directly</summary>
 
 ```bash
 pip install -r requirements.txt
@@ -126,183 +124,183 @@ python apps/adw_server/main.py
 ```
 </details>
 
-### 3. Acceder a Focus Keeper
+### 3. Access Focus Keeper
 
-Una vez que el servidor esté ejecutándose:
+Once the server is running:
 
-1. Abre tu navegador y navega a: **http://localhost:8000/app**
-2. El navegador solicitará permisos de cámara - haz clic en "Allow"
-3. Haz clic en "Start Session" para comenzar a rastrear tu enfoque
-4. ¡Ponte a trabajar! La app monitoreará tu atención y te alertará si te distraes
+1. Open your browser and navigate to: **http://localhost:8000/app**
+2. The browser will request camera permissions - click "Allow"
+3. Click "Start Session" to begin tracking your focus
+4. Get to work! The app will monitor your attention and alert you if you get distracted
 
-### 4. Endpoints Disponibles
+### 4. Available Endpoints
 
-- **Focus Keeper app**: http://localhost:8000/app - La aplicación principal
+- **Focus Keeper app**: http://localhost:8000/app - The main application
 - **Health check**: http://localhost:8000/health
 - **Readiness check**: http://localhost:8000/health/ready
 - **GitHub webhooks**: http://localhost:8000/ (POST)
 
 ## Tactical Agentic Coding (TAC)
 
-### ¿Qué es TAC?
+### What is TAC?
 
-TAC es un paradigma donde:
-- Los patrones de ingeniería se templetizan
-- Los agentes de IA aprenden a operar el código base
-- Se escala el impacto a través del cómputo, no del esfuerzo directo
+TAC is a paradigm where:
+- Engineering patterns are templated
+- AI agents learn to operate the codebase
+- Impact scales through computation, not direct effort
 
-### Capas del Proyecto
+### Project Layers
 
-#### Capa Agentica
+#### Agentic Layer
 
-Responsable de la codificación agentica - donde se templetizan los patrones de ingeniería:
+Responsible for agentic coding - where engineering patterns are templated:
 
-- **`.claude/commands/`**: Templates de comandos reutilizables
-- **`adws/`**: AI Developer Workflows ejecutables
-- **`specs/`**: Especificaciones que guían las acciones de los agentes
+- **`.claude/commands/`**: Reusable command templates
+- **`adws/`**: Executable AI Developer Workflows
+- **`specs/`**: Specifications that guide agent actions
 
-#### Capa de Aplicación
+#### Application Layer
 
-El código de tu aplicación real - sobre lo que operan los agentes:
+Your actual application code - what the agents operate on:
 
-- **`apps/`**: Código de aplicación
-  - `adw_server/`: Herramienta de automatización ADW (NO es el servidor principal de la app)
+- **`apps/`**: Application code
+  - `adw_server/`: ADW automation tool (NOT the main app server)
 
 ## ADW Server
 
-El ADW Server es una **herramienta de automatización**, no el servidor principal de la aplicación.
+The ADW Server is an **automation tool**, not the main application server.
 
-**Propósito:**
-- Integración GitHub → ADW workflows
-- Automatización de tareas de desarrollo
-- Monitoreo de salud
+**Purpose:**
+- GitHub → ADW workflows integration
+- Development task automation
+- Health monitoring
 
-**Configuración de GitHub Webhook:**
+**GitHub Webhook Configuration:**
 
-1. Ir a Settings → Webhooks → Add webhook
-2. Payload URL: `https://tu-servidor.com/`
+1. Go to Settings → Webhooks → Add webhook
+2. Payload URL: `https://your-server.com/`
 3. Content type: `application/json`
-4. Secret: (mismo que `GH_WB_SECRET` en `.env`)
-5. Events: Seleccionar "Issues" y "Pull requests"
+4. Secret: (same as `GH_WB_SECRET` in `.env`)
+5. Events: Select "Issues" and "Pull requests"
 
-**Labels soportados:**
-- `implement` / `bug` → Workflow completo (plan + implementación)
-- `feature` → Solo planning
-- `chore` / `plan` → Solo planning
+**Supported Labels:**
+- `implement` / `bug` → Full workflow (plan + implementation)
+- `feature` → Planning only
+- `chore` / `plan` → Planning only
 
 **Pull Request Review Workflow:**
 
-Cuando se crea o actualiza un Pull Request que referencia un issue (con "Closes #N", "Fixes #N", o "Resolves #N"), se ejecuta automáticamente un workflow de revisión que:
-- Analiza el código usando Claude
-- Ejecuta los tests del proyecto
-- Captura screenshots si hay cambios en UI (futuro)
-- Determina el estado de aprobación basado en el análisis
-- Publica los resultados en el thread del issue
+When a Pull Request is created or updated that references an issue (with "Closes #N", "Fixes #N", or "Resolves #N"), a review workflow automatically executes that:
+- Analyzes code using Claude
+- Runs project tests
+- Captures screenshots if there are UI changes (future)
+- Determines approval status based on analysis
+- Posts results to the issue thread
 
-**Estados de Revisión:**
+**Review States:**
 
-El workflow de revisión puede resultar en tres estados:
-- **APPROVED**: El código cumple con los estándares, tests pasan, sin problemas detectados
-- **CHANGES REQUESTED**: Se encontraron problemas que requieren correcciones
-- **NEEDS DISCUSSION**: Requiere revisión manual o discusión (casos ambiguos)
+The review workflow can result in three states:
+- **APPROVED**: Code meets standards, tests pass, no issues detected
+- **CHANGES REQUESTED**: Problems found that require corrections
+- **NEEDS DISCUSSION**: Requires manual review or discussion (ambiguous cases)
 
-**Acciones Automáticas Post-Revisión:**
+**Post-Review Automated Actions:**
 
-El sistema puede realizar acciones automáticas basadas en el resultado de la revisión:
+The system can perform automatic actions based on review results:
 
 - **APPROVED**:
-  - **Auto-merge** del PR (configurable con `AUTO_MERGE_ON_APPROVAL=true`)
-  - El PR se fusiona automáticamente a la rama base
-  - Método de merge configurable (squash, merge, rebase)
+  - **Auto-merge** of PR (configurable with `AUTO_MERGE_ON_APPROVAL=true`)
+  - PR automatically merges to base branch
+  - Configurable merge method (squash, merge, rebase)
 
 - **CHANGES REQUESTED**:
-  - **Auto-reimplement** con feedback de revisión (configurable con `AUTO_REIMPLEMENT_ON_CHANGES=true`)
-  - El agente lee el feedback de la revisión
-  - Implementa automáticamente las correcciones solicitadas
-  - Crea un nuevo commit con los cambios
-  - El PR actualizado dispara una nueva revisión automática
+  - **Auto-reimplement** with review feedback (configurable with `AUTO_REIMPLEMENT_ON_CHANGES=true`)
+  - Agent reads review feedback
+  - Automatically implements requested corrections
+  - Creates a new commit with changes
+  - Updated PR triggers new automatic review
 
 - **NEEDS DISCUSSION**:
-  - Solo publica resultados
-  - Requiere intervención manual del desarrollador
+  - Only posts results
+  - Requires manual developer intervention
 
-**Configuración de Acciones Post-Revisión:**
+**Post-Review Actions Configuration:**
 
-Las acciones automáticas pueden configurarse en `.env`:
+Automatic actions can be configured in `.env`:
 ```bash
-AUTO_MERGE_ON_APPROVAL=true          # Merge automático en aprobación
-AUTO_REIMPLEMENT_ON_CHANGES=true     # Re-implementación automática en cambios solicitados
-MERGE_METHOD=squash                  # Método de merge (squash, merge, rebase)
-MAX_REIMPLEMENT_ATTEMPTS=3           # Máximo de intentos para prevenir loops
+AUTO_MERGE_ON_APPROVAL=true          # Automatic merge on approval
+AUTO_REIMPLEMENT_ON_CHANGES=true     # Automatic re-implementation on requested changes
+MERGE_METHOD=squash                  # Merge method (squash, merge, rebase)
+MAX_REIMPLEMENT_ATTEMPTS=3           # Maximum attempts to prevent loops
 ```
 
-**Protección contra Loops Infinitos:**
+**Infinite Loop Protection:**
 
-El sistema implementa protección robusta contra loops de re-implementación:
-- **Rastrea intentos por issue**: Cuenta cuántas veces se ha intentado re-implementar
-- **Límite configurable**: Después de alcanzar `MAX_REIMPLEMENT_ATTEMPTS` (default: 3), detiene la auto-reimplementación
-- **Requiere intervención manual**: Después del límite, los cambios deben hacerse manualmente
-- **Reset en merge exitoso**: El contador se reinicia cuando un PR se fusiona exitosamente
-- **Previene escenarios de falla repetida**: Evita que el agente genere código que falla la revisión indefinidamente
+The system implements robust protection against re-implementation loops:
+- **Tracks attempts per issue**: Counts how many times re-implementation has been attempted
+- **Configurable limit**: After reaching `MAX_REIMPLEMENT_ATTEMPTS` (default: 3), stops auto-reimplementation
+- **Requires manual intervention**: After the limit, changes must be made manually
+- **Reset on successful merge**: Counter resets when a PR successfully merges
+- **Prevents repeated failure scenarios**: Prevents agent from generating code that fails review indefinitely
 
-Para más detalles sobre el workflow de revisión y automatización post-revisión, consulta el [README del ADW Server](apps/adw_server/README.md).
+For more details on review workflow and post-review automation, see the [ADW Server README](apps/adw_server/README.md).
 
 ## Testing
 
-El proyecto incluye infraestructura de testing comprehensiva para ambos backend Python y frontend JavaScript, asegurando calidad y confiabilidad del código.
+The project includes comprehensive testing infrastructure for both Python backend and JavaScript frontend, ensuring code quality and reliability.
 
-### Estructura de Tests
+### Test Structure
 
-- **Tests de Python** (`tests/`): Tests del backend usando Pytest
-  - Tests de configuración
-  - Tests de handlers de eventos
-  - Tests de integración de GitHub
-  - Tests de workflows ADW
+- **Python Tests** (`tests/`): Backend tests using Pytest
+  - Configuration tests
+  - Event handler tests
+  - GitHub integration tests
+  - ADW workflow tests
 
-- **Tests de Frontend** (`apps/frontend/test/`): Tests de JavaScript usando Jest
-  - Tests de detección facial
-  - Tests de monitoreo de distracción
-  - Tests de reproducción de videos
-  - Tests de gestión de sesión
+- **Frontend Tests** (`apps/frontend/test/`): JavaScript tests using Jest
+  - Face detection tests
+  - Distraction monitoring tests
+  - Video playback tests
+  - Session management tests
 
-- **Script Unificado**: `scripts/run_tests.sh` - Ejecuta todos los tests con una sola línea de comando
+- **Unified Script**: `scripts/run_tests.sh` - Run all tests with a single command
 
-### Ejecutar Tests
+### Running Tests
 
-**Todos los tests:**
+**All tests:**
 
 ```bash
 ./scripts/run_tests.sh
 ```
 
-**Solo tests de Python:**
+**Python tests only:**
 
 ```bash
 ./scripts/run_tests.sh --python-only
-# O directamente:
+# Or directly:
 uv run pytest tests/ -v
 ```
 
-**Solo tests de frontend:**
+**Frontend tests only:**
 
 ```bash
 ./scripts/run_tests.sh --frontend-only
-# O directamente:
+# Or directly:
 cd apps/frontend && npm test
 ```
 
-**Con coverage:**
+**With coverage:**
 
 ```bash
 ./scripts/run_tests.sh --coverage
 ```
 
-### Objetivos de Coverage
+### Coverage Goals
 
-- **Backend Python**: >80% coverage
+- **Python Backend**: >80% coverage
 - **Frontend JavaScript**: >75% coverage
 
-Para ver reportes de coverage:
+To view coverage reports:
 ```bash
 # Python coverage report
 uv run pytest tests/ --cov=apps --cov=adws --cov-report=html
@@ -312,92 +310,92 @@ open htmlcov/index.html
 cd apps/frontend && npm test -- --coverage
 ```
 
-Para guía completa de testing, consulta la [Guía de Testing](docs/TESTING.md).
+For complete testing guide, see the [Testing Guide](docs/TESTING.md).
 
 ## Deployment
 
-El proyecto incluye soporte completo para deployment en producción usando Vercel.
+The project includes full support for production deployment using Vercel.
 
 ### Vercel Deployment
 
-El proyecto está configurado para deployment serverless en Vercel:
+The project is configured for serverless deployment on Vercel:
 
-- **FastAPI app serverless**: El ADW server se ejecuta como función serverless
-- **Frontend estático**: Focus Keeper se sirve como archivos estáticos
-- **Configuración automática**: `vercel.json` configura rutas y rewrites
-- **Variables de entorno**: Configurables en el dashboard de Vercel
+- **Serverless FastAPI app**: ADW server runs as a serverless function
+- **Static frontend**: Focus Keeper is served as static files
+- **Automatic configuration**: `vercel.json` configures routes and rewrites
+- **Environment variables**: Configurable in Vercel dashboard
 
 ### Quick Deploy
 
 ```bash
-# Ver VERCEL_DEPLOYMENT.md para instrucciones detalladas
+# See VERCEL_DEPLOYMENT.md for detailed instructions
 vercel deploy
 ```
 
-### Configuración Requerida
+### Required Configuration
 
-Variables de entorno en Vercel dashboard:
+Environment variables in Vercel dashboard:
 
 ```bash
 GH_WB_SECRET=your_webhook_secret_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-AUTO_MERGE_ON_APPROVAL=true                    # Opcional
-AUTO_REIMPLEMENT_ON_CHANGES=true              # Opcional
-MERGE_METHOD=squash                           # Opcional
-MAX_REIMPLEMENT_ATTEMPTS=3                    # Opcional
+AUTO_MERGE_ON_APPROVAL=true                    # Optional
+AUTO_REIMPLEMENT_ON_CHANGES=true              # Optional
+MERGE_METHOD=squash                           # Optional
+MAX_REIMPLEMENT_ATTEMPTS=3                    # Optional
 ```
 
-### Consideraciones de Deployment
+### Deployment Considerations
 
-- **Límites de funciones serverless**: Vercel tiene timeouts de ejecución (10s hobby, 60s pro)
-- **Filesystem efímero**: Solo `/tmp` es escribible, archivos se borran entre invocaciones
-- **Cold starts**: Primera ejecución puede ser más lenta
-- **Escalamiento automático**: Vercel maneja el escalamiento automáticamente
+- **Serverless function limits**: Vercel has execution timeouts (10s hobby, 60s pro)
+- **Ephemeral filesystem**: Only `/tmp` is writable, files are deleted between invocations
+- **Cold starts**: First execution may be slower
+- **Automatic scaling**: Vercel handles scaling automatically
 
-Para guía completa de deployment, consulta la [Guía de Deployment Vercel](VERCEL_DEPLOYMENT.md).
+For complete deployment guide, see the [Vercel Deployment Guide](VERCEL_DEPLOYMENT.md).
 
-## Desarrollo
+## Development
 
 ### Environment Setup
 
-El proyecto utiliza infraestructura de testing comprehensiva para ambos backend y frontend, asegurando calidad del código en todos los componentes.
+The project uses comprehensive testing infrastructure for both backend and frontend, ensuring code quality across all components.
 
 ### Hot Reload
 
-- **Backend FastAPI**: Auto-reload habilitado en modo desarrollo (uvicorn con `--reload`)
-- **Frontend**: Servido como archivos estáticos, recarga automática en cambios (usa live server o similar)
+- **FastAPI Backend**: Auto-reload enabled in development mode (uvicorn with `--reload`)
+- **Frontend**: Served as static files, automatic reload on changes (use live server or similar)
 
-### Scripts Disponibles
+### Available Scripts
 
 ```bash
-# Los scripts de inicio y utilidades están en scripts/
+# Startup and utility scripts are in scripts/
 ls scripts/
 
-# Ejemplos:
-./scripts/start_webhook_server.sh     # Inicia el servidor
-./scripts/run_tests.sh                # Ejecuta todos los tests
+# Examples:
+./scripts/start_webhook_server.sh     # Start the server
+./scripts/run_tests.sh                # Run all tests
 ```
 
-### Estructura de Directorios
+### Directory Structure
 
-- **`adws/`**: Workflows de IA para desarrollo - scripts de automatización
-- **`apps/frontend/`**: Focus Keeper app - aplicación anti-procrastinación
-- **`apps/adw_server/`**: Servidor de automatización ADW
-- **`specs/`**: Especificaciones de implementación - planes para agentes
-- **`scripts/`**: Scripts de utilidad y inicio
-- **`tests/`**: Tests del backend Python
-- **`docs/`**: Documentación adicional
+- **`adws/`**: AI workflows for development - automation scripts
+- **`apps/frontend/`**: Focus Keeper app - anti-procrastination application
+- **`apps/adw_server/`**: ADW automation server
+- **`specs/`**: Implementation specifications - plans for agents
+- **`scripts/`**: Utility and startup scripts
+- **`tests/`**: Python backend tests
+- **`docs/`**: Additional documentation
 
-## 12 Puntos de Apalancamiento del Agentic Coding
+## 12 Leverage Points of Agentic Coding
 
-### En el Agente (Core Four)
+### In the Agent (Core Four)
 
 1. Context
 2. Model
 3. Prompt
 4. Tools
 
-### A través del Agente
+### Through the Agent
 
 5. Standard Output
 6. Types
@@ -408,141 +406,141 @@ ls scripts/
 11. Templates
 12. AI Developer Workflows
 
-## Flexibilidad
+## Flexibility
 
-Esta es *una forma* de organizar la capa agentica. El principio clave es crear un entorno estructurado donde:
-- Los patrones de ingeniería sean templates reutilizables
-- Los agentes tengan instrucciones claras de cómo operar el código base
-- Los workflows sean componibles y escalables
-- La salida sea observable y debuggeable
+This is *one way* to organize the agentic layer. The key principle is creating a structured environment where:
+- Engineering patterns are reusable templates
+- Agents have clear instructions on how to operate the codebase
+- Workflows are composable and scalable
+- Output is observable and debuggable
 
-Siéntete libre de adaptar esta estructura a tus necesidades específicas.
+Feel free to adapt this structure to your specific needs.
 
 ## Troubleshooting
 
-### Problemas con Focus Keeper
+### Focus Keeper Issues
 
-#### Cámara no funciona
+#### Camera not working
 
-**Problema**: Error "Failed to access camera"
+**Problem**: "Failed to access camera" error
 
-**Soluciones**:
-- Verifica permisos del navegador (Settings → Privacy → Camera)
-- Asegura que ninguna otra app esté usando la cámara
-- Prueba con otro navegador
-- En macOS: System Preferences → Security & Privacy → Camera
+**Solutions**:
+- Check browser permissions (Settings → Privacy → Camera)
+- Ensure no other app is using the camera
+- Try another browser
+- On macOS: System Preferences → Security & Privacy → Camera
 
-#### Rostro no detectado
+#### Face not detected
 
-**Problema**: Estado muestra "Distracted" incluso cuando estás presente
+**Problem**: Status shows "Distracted" even when you're present
 
-**Soluciones**:
-- Mejora la iluminación (agrega lámpara de escritorio, abre cortinas)
-- Quita gafas si causan reflejos
-- Acércate más a la cámara
-- Asegura que tu rostro esté centrado en el frame
+**Solutions**:
+- Improve lighting (add desk lamp, open curtains)
+- Remove glasses if causing reflections
+- Move closer to the camera
+- Ensure your face is centered in the frame
 
-#### Modelo no carga
+#### Model won't load
 
-**Problema**: Error "Failed to load face detection model"
+**Problem**: "Failed to load face detection model" error
 
-**Soluciones**:
-- Verifica conexión a internet (TensorFlow.js carga desde CDN)
-- Limpia cache del navegador y recarga
-- Deshabilita ad blockers que puedan bloquear requests CDN
-- Prueba con otro navegador
+**Solutions**:
+- Check internet connection (TensorFlow.js loads from CDN)
+- Clear browser cache and reload
+- Disable ad blockers that may block CDN requests
+- Try another browser
 
-#### Rendimiento pobre / lag
+#### Poor performance / lag
 
-**Problema**: App lenta o no responde
+**Problem**: App is slow or unresponsive
 
-**Soluciones**:
-- Cierra otras tabs del navegador
-- Usa Chrome (mejor rendimiento WebGL)
-- Cierra otras aplicaciones que usen GPU
-- Verifica que tu dispositivo tenga recursos suficientes
+**Solutions**:
+- Close other browser tabs
+- Use Chrome (better WebGL performance)
+- Close other GPU-using applications
+- Verify your device has sufficient resources
 
-### Problemas con ADW Automation
+### ADW Automation Issues
 
-#### Webhook signature validation falla
+#### Webhook signature validation fails
 
-**Problema**: Webhooks rechazados con error de validación
+**Problem**: Webhooks rejected with validation error
 
-**Soluciones**:
-- Verifica que `GH_WB_SECRET` en `.env` coincida con GitHub settings
-- Asegura que el secret no tenga espacios o caracteres especiales
-- Regenera el secret si es necesario
+**Solutions**:
+- Verify `GH_WB_SECRET` in `.env` matches GitHub settings
+- Ensure the secret has no spaces or special characters
+- Regenerate the secret if necessary
 
-#### Workflows ADW no se disparan
+#### ADW workflows not triggering
 
-**Problema**: Issues con labels no activan workflows
+**Problem**: Issues with labels don't activate workflows
 
-**Soluciones**:
-- Verifica que el issue tenga el label correcto (`implement`, `bug`, `feature`, `chore`)
-- Revisa logs del servidor para errores
-- Asegura que webhooks estén configurados correctamente en GitHub
-- Verifica que `ANTHROPIC_API_KEY` esté configurada
+**Solutions**:
+- Verify the issue has the correct label (`implement`, `bug`, `feature`, `chore`)
+- Check server logs for errors
+- Ensure webhooks are configured correctly in GitHub
+- Verify `ANTHROPIC_API_KEY` is configured
 
-#### Auto-merge falla
+#### Auto-merge fails
 
-**Problema**: PR aprobado pero no se fusiona automáticamente
+**Problem**: PR approved but doesn't merge automatically
 
-**Soluciones**:
-- Verifica que `AUTO_MERGE_ON_APPROVAL=true` en `.env`
-- Asegura que no haya conflictos de merge
-- Verifica permisos del token de GitHub (debe poder mergear)
-- Revisa protecciones de rama en GitHub settings
+**Solutions**:
+- Verify `AUTO_MERGE_ON_APPROVAL=true` in `.env`
+- Ensure there are no merge conflicts
+- Check GitHub token permissions (must be able to merge)
+- Review branch protections in GitHub settings
 
-#### Loops de re-implementación
+#### Re-implementation loops
 
-**Problema**: El agente intenta re-implementar indefinidamente
+**Problem**: Agent attempts to re-implement indefinitely
 
-**Soluciones**:
-- Verifica `MAX_REIMPLEMENT_ATTEMPTS` en `.env` (default: 3)
-- Proporciona feedback más claro en las revisiones
-- Considera aumentar el límite si los cambios son complejos
-- Revisa el contador de intentos en los logs
+**Solutions**:
+- Check `MAX_REIMPLEMENT_ATTEMPTS` in `.env` (default: 3)
+- Provide clearer feedback in reviews
+- Consider increasing the limit if changes are complex
+- Review attempt counter in logs
 
-Para troubleshooting más detallado, consulta los READMEs de cada componente:
+For more detailed troubleshooting, see the READMEs of each component:
 - [Frontend Troubleshooting](apps/frontend/README.md#troubleshooting)
 - [ADW Server README](apps/adw_server/README.md)
 
-## Documentación Adicional
+## Additional Documentation
 
-### Documentación de Usuario
+### User Documentation
 
-- **[Focus Keeper App](apps/frontend/README.md)** - Documentación completa de la aplicación anti-procrastinación
-  - Características y funcionalidad
-  - Guía de uso
-  - Configuración
+- **[Focus Keeper App](apps/frontend/README.md)** - Complete anti-procrastination application documentation
+  - Features and functionality
+  - Usage guide
+  - Configuration
   - Troubleshooting
 
-### Documentación de Desarrollo
+### Development Documentation
 
-- **[ADW README](adws/README.md)** - Documentación de AI Developer Workflows
-  - Soporte SDK
-  - Patrones de workflow
-  - Observabilidad
+- **[ADW README](adws/README.md)** - AI Developer Workflows documentation
+  - SDK support
+  - Workflow patterns
+  - Observability
 
-- **[ADW Server README](apps/adw_server/README.md)** - Servidor de automatización
+- **[ADW Server README](apps/adw_server/README.md)** - Automation server
   - PR review workflow
-  - Auto-merge y auto-reimplement
+  - Auto-merge and auto-reimplement
   - Loop protection
-  - Configuración
+  - Configuration
 
-- **[Testing Guide](docs/TESTING.md)** - Guía completa de testing
-  - Tests de Python
-  - Tests de frontend
+- **[Testing Guide](docs/TESTING.md)** - Complete testing guide
+  - Python tests
+  - Frontend tests
   - Coverage goals
   - Best practices
 
-- **[Deployment Guide](VERCEL_DEPLOYMENT.md)** - Guía de deployment Vercel
-  - Configuración serverless
-  - Variables de entorno
-  - Consideraciones de producción
+- **[Deployment Guide](VERCEL_DEPLOYMENT.md)** - Vercel deployment guide
+  - Serverless configuration
+  - Environment variables
+  - Production considerations
 
-- **Especificaciones** (`specs/`) - Planes de implementación y especificaciones de features
+- **Specifications** (`specs/`) - Implementation plans and feature specifications
 
-## Licencia
+## License
 
-Este proyecto es un desafío educativo para demostrar Tactical Agentic Coding.
+This project is an educational challenge to demonstrate Tactical Agentic Coding.
