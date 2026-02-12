@@ -1,7 +1,7 @@
 """Data types and models for ADW workflows."""
 
 from typing import List, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 # Re-export types from agent.py for convenience
@@ -41,6 +41,8 @@ class GitHubIssue(BaseModel):
 
 class ADWStateData(BaseModel):
     """ADW state data model for validation."""
+    model_config = ConfigDict(protected_namespaces=())
+
     adw_id: str
     issue_number: Optional[int] = None
     branch_name: Optional[str] = None
