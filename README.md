@@ -119,12 +119,22 @@ El ADW Server es una **herramienta de automatización**, no el servidor principa
 2. Payload URL: `https://tu-servidor.com/`
 3. Content type: `application/json`
 4. Secret: (mismo que `GITHUB_WEBHOOK_SECRET` en `.env`)
-5. Events: Seleccionar "Issues"
+5. Events: Seleccionar "Issues" y "Pull requests"
 
 **Labels soportados:**
 - `implement` / `bug` → Workflow completo (plan + implementación)
 - `feature` → Solo planning
 - `chore` / `plan` → Solo planning
+
+**Pull Request Review Workflow:**
+
+Cuando se crea o actualiza un Pull Request que referencia un issue (con "Closes #N", "Fixes #N", o "Resolves #N"), se ejecuta automáticamente un workflow de revisión que:
+- Analiza el código usando Claude
+- Ejecuta los tests del proyecto
+- Captura screenshots si hay cambios en UI (futuro)
+- Publica los resultados en el thread del issue
+
+Los PRs deben incluir referencias a issues en la descripción para activar el workflow de revisión automática.
 
 ## Desarrollo
 

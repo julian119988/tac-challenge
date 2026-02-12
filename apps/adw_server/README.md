@@ -117,9 +117,11 @@ Go to repository **Settings → Webhooks → Add webhook**:
 - **Payload URL:** `https://your-server.com/` or use ngrok for local: `https://abc123.ngrok.io/`
 - **Content type:** `application/json`
 - **Secret:** Same as `GITHUB_WEBHOOK_SECRET` in `.env`
-- **Events:** Select "Issues" (and optionally "Pull requests")
+- **Events:** Select "Issues" and "Pull requests"
 
 ### 2. Test the Integration
+
+**Issue Workflow:**
 
 Create a new issue with one of these labels:
 - `implement` - Triggers full workflow
@@ -132,6 +134,20 @@ The webhook server will:
 2. Post initial comment to issue
 3. Trigger appropriate ADW workflow
 4. Post completion comment with results
+
+**Pull Request Review Workflow:**
+
+When a Pull Request is created or updated that references an issue (using "Closes #N", "Fixes #N", or "Resolves #N" in the PR description), the webhook server will:
+1. Extract issue references from the PR body
+2. Post initial review comment to the linked issue(s)
+3. Trigger the `/review` workflow to analyze code and run tests
+4. Post review results to the linked issue(s) with:
+   - Code review summary
+   - Test results
+   - Approval status
+   - Link to PR
+
+**Note:** PRs without issue references will not trigger the review workflow. This ensures reviews are posted to the appropriate issue threads.
 
 ## Development
 
