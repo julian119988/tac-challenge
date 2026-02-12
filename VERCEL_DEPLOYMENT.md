@@ -102,6 +102,161 @@ The following variables can be configured if needed:
 7. Ensure the webhook is Active
 8. Click "Add webhook"
 
+## Deployment Protection Settings
+
+### What is Deployment Protection?
+
+Vercel's Deployment Protection is a security feature that adds authentication in front of your deployments. When enabled, users must authenticate (via password, SSO, or other methods) before accessing any route in your application.
+
+**Common Symptoms:**
+- Users see "Authentication Required" or "Vercel Authentication" page
+- Redirected to SSO login when accessing `/app` or `/health`
+- curl requests return HTML authentication pages instead of expected API responses
+- Browser shows "Authenticating" page that requires login
+
+### When to Use Deployment Protection
+
+**Enable Protection For:**
+- Internal company applications
+- Private demos requiring access control
+- Development/staging environments with sensitive data
+- Applications requiring team collaboration with restricted access
+
+**Disable Protection For:**
+- Public demo applications (like Focus Keeper)
+- Open-source projects with public access
+- Applications with their own authentication layer
+- Public APIs and webhooks that need unrestricted access
+
+### Deployment Protection vs Production Deployment
+
+Vercel has two types of deployments with different protection defaults:
+
+1. **Preview Deployments** (e.g., `your-app-xyz123.vercel.app`)
+   - Created for every branch and commit
+   - Often have Deployment Protection enabled by default
+   - URL format: `project-name-hash-username.vercel.app`
+
+2. **Production Deployments** (e.g., custom domain or main URL)
+   - Deployment from your main/production branch
+   - Can have different protection settings than preview deployments
+   - Usually configured for public access if it's a public app
+
+### How to Configure Deployment Protection
+
+#### Checking Current Protection Status
+
+1. Log in to Vercel dashboard at https://vercel.com
+2. Navigate to your project (e.g., "tac-challenge")
+3. Click on "Settings" in the top navigation
+4. Select "Deployment Protection" from the left sidebar
+5. View current protection settings
+
+#### Option 1: Disable Protection Entirely (Recommended for Public Apps)
+
+For public applications like Focus Keeper:
+
+1. Go to Settings → Deployment Protection
+2. Under "Protection Level", select **"Disabled"** or **"Standard Protection: Disabled"**
+3. Click "Save"
+4. All deployments (preview and production) will be publicly accessible
+
+#### Option 2: Configure Protection by Deployment Type
+
+For selective protection:
+
+1. Go to Settings → Deployment Protection
+2. Choose **"Only Production"** to protect only production deployments
+   - Preview deployments will be publicly accessible
+   - Production deployment requires authentication
+3. Or choose **"All Deployments"** and configure bypass rules (see below)
+4. Click "Save"
+
+#### Option 3: Configure Bypass Rules
+
+To allow specific access while keeping protection enabled:
+
+1. Go to Settings → Deployment Protection
+2. Under "Bypass for Automation", add:
+   - **IP Allowlist**: Add your IP addresses for direct access
+   - **Bypass Tokens**: Generate tokens for automated testing
+   - **Vercel Authentication**: Configure SSO providers
+3. Click "Save"
+
+**Note:** Bypass rules are advanced features available on paid Vercel plans.
+
+### Configuring for Focus Keeper
+
+For the Focus Keeper application (a public demo/showcase app), the recommended configuration is:
+
+1. **Disable Deployment Protection** entirely, OR
+2. Set protection to **"Only Production"** and ensure preview deployments are used for development
+3. Use the production deployment URL for public sharing
+
+**Why:** Focus Keeper is a camera-based focus tracking application meant to be publicly accessible as a demo. Authentication would prevent users from trying the app.
+
+### Troubleshooting Authentication Errors
+
+#### Issue: "Authentication Required" or "Vercel Authentication" Page
+
+**Problem:** Vercel Deployment Protection is blocking access to your application.
+
+**Symptoms:**
+- Accessing `/app` shows authentication page instead of the app
+- Accessing `/health` returns HTML authentication page instead of JSON
+- curl requests return 302 redirects to authentication pages
+- Browser displays "Authenticating" with SSO login prompt
+
+**Solution:**
+1. Verify Deployment Protection is the issue:
+   ```bash
+   curl -I https://your-deployment.vercel.app/app
+   ```
+   If you see a `302` redirect or authentication-related headers, protection is enabled.
+
+2. Follow steps in "How to Configure Deployment Protection" above to disable or configure protection.
+
+3. After changing settings, test access:
+   ```bash
+   curl https://your-deployment.vercel.app/health
+   ```
+   Should return JSON: `{"status":"ok","service":"adw-webhook-server","environment":"production"}`
+
+#### Issue: Different Behavior Between URLs
+
+**Problem:** One URL works but another doesn't (e.g., custom domain works but preview URL doesn't).
+
+**Cause:** Production and preview deployments have different protection settings.
+
+**Solution:**
+- Check protection settings for both deployment types
+- Configure protection separately for production vs preview deployments
+- Use the production URL for public access if preview deployments are protected
+
+#### Issue: Fixed Path Issues but Still Getting Authentication Page
+
+**Problem:** Fixed static file paths (Issue #58) but still can't access the app.
+
+**Distinction:**
+- **Issue #58**: Static file path configuration (`STATIC_FILES_DIR` environment variable)
+- **Issue #60**: Vercel Deployment Protection (dashboard security setting)
+
+**Solution:** These are separate issues. Even with correct path configuration, Deployment Protection can still block access. Follow the Deployment Protection configuration steps above.
+
+### Best Practices
+
+1. **Public Applications**: Disable Deployment Protection or use production deployments without protection
+2. **Private Applications**: Enable protection with appropriate authentication method (password, SSO)
+3. **Development Workflow**: Use preview deployments with protection for internal testing, production without protection for public access
+4. **API Endpoints**: Ensure webhook endpoints like `/webhooks/github` are accessible (protection can block webhooks)
+5. **Testing**: Always test both authenticated and unauthenticated access after changing protection settings
+
+### Documentation References
+
+- Vercel Deployment Protection: https://vercel.com/docs/security/deployment-protection
+- Vercel Authentication: https://vercel.com/docs/security/deployment-protection/methods-to-protect-deployments
+- Production vs Preview Deployments: https://vercel.com/docs/deployments/environments
+
 ## Testing the Deployment
 
 ### Health Check
