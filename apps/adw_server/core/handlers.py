@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 from core.adw_integration import (
     trigger_chore_workflow,
     trigger_chore_implement_workflow,
+    trigger_review_workflow,
     generate_adw_id,
     WorkflowResult,
 )
@@ -221,6 +222,39 @@ def extract_repo_info(full_name: str) -> tuple[str, str]:
     if len(parts) != 2:
         raise ValueError(f"Invalid repository full_name format: {full_name}")
     return parts[0], parts[1]
+
+
+def extract_issue_references(pr_body: str) -> list[int]:
+    """Extract issue references from PR body/description.
+
+    Parses PR body for patterns like "Closes #123", "Fixes #456", "Resolves #789".
+    Supports common GitHub issue reference keywords (case-insensitive).
+
+    Args:
+        pr_body: Pull request body/description text
+
+    Returns:
+        List of issue numbers found in the PR description
+
+    Example:
+        issues = extract_issue_references("Closes #123 and fixes #456")
+        # Returns: [123, 456]
+    """
+    import re
+
+    if not pr_body:
+        return []
+
+    # Pattern to match: closes/fixes/resolves #123
+    # Case-insensitive, supports multiple references
+    pattern = r'(?:closes|fixes|resolves)\s+#(\d+)'
+    matches = re.findall(pattern, pr_body, re.IGNORECASE)
+
+    # Convert to integers and remove duplicates
+    issue_numbers = list(set(int(match) for match in matches))
+
+    logger.debug(f"Extracted issue references from PR body: {issue_numbers}")
+    return issue_numbers
 
 
 def make_github_issue_comment(
@@ -748,8 +782,9 @@ async def handle_pull_request_event(
 ) -> dict:
     """Handle GitHub pull request webhook event.
 
-    Currently logs the event. Can be extended to trigger /review workflow
-    or other PR-related workflows.
+    Triggers automated PR review workflow when a PR is opened or updated.
+    The review workflow analyzes code, runs tests, and posts results to
+    the linked issue thread.
 
     Args:
         payload: Parsed pull request webhook payload
@@ -757,27 +792,247 @@ async def handle_pull_request_event(
         model: Model to use for ADW workflows
 
     Returns:
-        Dictionary with handling status
+        Dictionary with handling status and workflow results
 
     Example:
         result = await handle_pull_request_event(payload)
     """
     pr_number = payload.number
     action = payload.action
+    repo_full_name = payload.repository.full_name
 
     logger.info(
-        f"Handling pull request event: #{pr_number} action={action}"
+        f"Handling pull request event: #{pr_number} action={action} repo={repo_full_name}"
     )
 
-    # Future: Could trigger /review workflow for opened/synchronize actions
-    # For now, just log the event
+    # Only trigger review for opened and synchronize (new commits) actions
+    if action not in ["opened", "synchronize"]:
+        logger.info(f"Skipping PR review for action: {action}")
+        return {
+            "workflow_triggered": False,
+            "reason": f"PR action '{action}' does not trigger review workflow",
+            "pr_number": pr_number,
+            "action": action,
+        }
 
-    return {
-        "workflow_triggered": False,
-        "reason": "PR workflow not yet implemented",
-        "pr_number": pr_number,
-        "action": action,
-    }
+    # Extract PR body to find issue references
+    pr_body = payload.pull_request.get("body", "")
+    pr_html_url = payload.pull_request.get("html_url", f"https://github.com/{repo_full_name}/pull/{pr_number}")
+
+    # Extract issue references from PR body
+    issue_numbers = extract_issue_references(pr_body)
+
+    if not issue_numbers:
+        logger.info(f"No issue references found in PR #{pr_number} body, skipping review workflow")
+        return {
+            "workflow_triggered": False,
+            "reason": "No issue references found in PR body",
+            "pr_number": pr_number,
+            "action": action,
+        }
+
+    logger.info(f"Found issue references in PR #{pr_number}: {issue_numbers}")
+
+    # Generate unique ADW ID for this review workflow
+    adw_id = generate_adw_id()
+
+    # Extract repo owner and name
+    try:
+        repo_owner, repo_name = extract_repo_info(repo_full_name)
+    except ValueError as e:
+        logger.error(f"Invalid repository full_name: {e}")
+        return {
+            "workflow_triggered": False,
+            "reason": f"Invalid repository name: {str(e)}",
+            "pr_number": pr_number,
+            "action": action,
+        }
+
+    # Post initial comment to issue thread(s) indicating review has started
+    for issue_number in issue_numbers:
+        initial_comment = (
+            f"🔍 **Pull Request Review Started**\n\n"
+            f"**PR:** [#{pr_number}]({pr_html_url})\n"
+            f"**ADW ID:** `{adw_id}`\n\n"
+            f"Automated review is in progress. Results will be posted shortly..."
+        )
+        try:
+            make_github_issue_comment(
+                issue_number=issue_number,
+                comment=initial_comment,
+                repo_owner=repo_owner,
+                repo_name=repo_name,
+            )
+            logger.info(f"Posted review start comment to issue #{issue_number}")
+        except Exception as e:
+            logger.warning(f"Failed to post initial comment to issue #{issue_number}: {e}")
+
+    # Trigger the review workflow
+    try:
+        logger.info(f"Triggering review workflow for PR #{pr_number}, adw_id={adw_id}")
+        review_result = await trigger_review_workflow(
+            pr_number=pr_number,
+            repo_full_name=repo_full_name,
+            adw_id=adw_id,
+            model=model,
+            working_dir=working_dir,
+        )
+
+        # Format review results for comment
+        review_comment = format_review_results(
+            review_output=review_result.output,
+            pr_number=pr_number,
+            pr_url=pr_html_url,
+            adw_id=adw_id,
+        )
+
+        # Post review results to all linked issues
+        for issue_number in issue_numbers:
+            try:
+                make_github_issue_comment(
+                    issue_number=issue_number,
+                    comment=review_comment,
+                    repo_owner=repo_owner,
+                    repo_name=repo_name,
+                )
+                logger.info(f"Posted review results to issue #{issue_number}")
+            except Exception as e:
+                logger.error(f"Failed to post review results to issue #{issue_number}: {e}")
+
+        return {
+            "workflow_triggered": True,
+            "workflow_type": "review",
+            "pr_number": pr_number,
+            "action": action,
+            "adw_id": adw_id,
+            "success": review_result.success,
+            "issue_numbers": issue_numbers,
+            "error_message": review_result.error_message,
+        }
+
+    except Exception as e:
+        logger.error(f"Error executing review workflow for PR #{pr_number}: {e}", exc_info=True)
+
+        # Post error comment to issue threads
+        error_comment = (
+            f"🔍 **Pull Request Review Failed**\n\n"
+            f"**PR:** [#{pr_number}]({pr_html_url})\n"
+            f"**ADW ID:** `{adw_id}`\n\n"
+            f"❌ Review workflow encountered an error:\n"
+            f"```\n{str(e)}\n```\n\n"
+            f"Please check the logs for details: `agents/{adw_id}/reviewer/`"
+        )
+
+        for issue_number in issue_numbers:
+            try:
+                make_github_issue_comment(
+                    issue_number=issue_number,
+                    comment=error_comment,
+                    repo_owner=repo_owner,
+                    repo_name=repo_name,
+                )
+                logger.info(f"Posted error comment to issue #{issue_number}")
+            except Exception as post_error:
+                logger.error(f"Failed to post error comment to issue #{issue_number}: {post_error}")
+
+        return {
+            "workflow_triggered": True,
+            "workflow_type": "review",
+            "pr_number": pr_number,
+            "action": action,
+            "adw_id": adw_id,
+            "success": False,
+            "issue_numbers": issue_numbers,
+            "error_message": str(e),
+        }
+
+
+def format_review_results(
+    review_output: str,
+    pr_number: int,
+    pr_url: str,
+    adw_id: str,
+) -> str:
+    """Format review workflow results for posting as an issue comment.
+
+    Parses review workflow output for key information and creates a
+    formatted markdown comment with review summary, test results, and metadata.
+
+    Args:
+        review_output: Output from the review workflow
+        pr_number: Pull request number
+        pr_url: Pull request URL
+        adw_id: ADW workflow ID
+
+    Returns:
+        Formatted markdown string ready for GitHub comment posting
+
+    Example:
+        comment = format_review_results(
+            review_output="Review completed...",
+            pr_number=42,
+            pr_url="https://github.com/owner/repo/pull/42",
+            adw_id="abc12345"
+        )
+    """
+    # Parse review output for key information
+    # Look for test results, review status, etc.
+    import re
+
+    # Try to extract test results from output
+    test_summary = ""
+    if "test" in review_output.lower():
+        # Look for common test result patterns
+        test_match = re.search(r'(\d+)\s+passed', review_output, re.IGNORECASE)
+        fail_match = re.search(r'(\d+)\s+failed', review_output, re.IGNORECASE)
+
+        if test_match or fail_match:
+            passed = test_match.group(1) if test_match else "0"
+            failed = fail_match.group(1) if fail_match else "0"
+            test_summary = f"\n### Test Results\n✅ {passed} passed | ❌ {failed} failed\n"
+
+    # Try to extract approval status
+    approval_status = ""
+    if "APPROVED" in review_output:
+        approval_status = "✅ **APPROVED**"
+    elif "CHANGES REQUESTED" in review_output or "CHANGES_REQUESTED" in review_output:
+        approval_status = "⚠️ **CHANGES REQUESTED**"
+    elif "NEEDS DISCUSSION" in review_output or "NEEDS_DISCUSSION" in review_output:
+        approval_status = "💬 **NEEDS DISCUSSION**"
+
+    # Build formatted comment
+    comment_parts = [
+        "🔍 **Pull Request Review**\n",
+        f"**PR:** [#{pr_number}]({pr_url})\n",
+        f"**ADW ID:** `{adw_id}`\n\n",
+    ]
+
+    if approval_status:
+        comment_parts.append(f"**Status:** {approval_status}\n\n")
+
+    if test_summary:
+        comment_parts.append(test_summary)
+
+    # Add review summary (truncate if too long)
+    comment_parts.append("\n### Review Summary\n")
+
+    # Try to extract summary section from review output
+    summary_match = re.search(r'## Summary\s*\n(.*?)(?=\n##|\Z)', review_output, re.DOTALL | re.IGNORECASE)
+    if summary_match:
+        summary_text = summary_match.group(1).strip()
+        # Truncate if too long
+        if len(summary_text) > 500:
+            summary_text = summary_text[:500] + "...\n\n_See full review output for details._"
+        comment_parts.append(f"{summary_text}\n")
+    else:
+        # No summary section found, provide generic message
+        comment_parts.append("Code review completed. Check the review output for details.\n")
+
+    # Add metadata section
+    comment_parts.append(f"\n---\n")
+    comment_parts.append(f"🤖 Automated review by ADW • Logs: `agents/{adw_id}/reviewer/`\n")
+
+    return ''.join(comment_parts)
 
 
 def create_workflow_comment(

@@ -570,6 +570,111 @@ async def trigger_chore_implement_workflow(
     return chore_result, implement_result
 
 
+async def trigger_review_workflow(
+    pr_number: int,
+    repo_full_name: str,
+    adw_id: Optional[str] = None,
+    model: Literal["sonnet", "opus"] = "sonnet",
+    working_dir: Optional[str] = None,
+) -> WorkflowResult:
+    """Trigger a PR review workflow.
+
+    The /review command performs a comprehensive code review of the PR changes,
+    including running tests and analyzing code quality.
+
+    Args:
+        pr_number: GitHub pull request number
+        repo_full_name: Full repository name (e.g., "owner/repo")
+        adw_id: Unique identifier for this workflow (generated if not provided)
+        model: Claude model to use (sonnet or opus)
+        working_dir: Working directory for workflow execution (default: current dir)
+
+    Returns:
+        WorkflowResult with success status, output, and review details
+
+    Example:
+        result = await trigger_review_workflow(
+            pr_number=42,
+            repo_full_name="myorg/myrepo",
+            model="sonnet"
+        )
+        if result.success:
+            print(f"Review completed: {result.output}")
+    """
+    # Generate ADW ID if not provided
+    if adw_id is None:
+        adw_id = generate_short_id()
+
+    # Use current directory if no working directory specified
+    if working_dir is None:
+        working_dir = os.getcwd()
+
+    logger.info(
+        f"→ trigger_review_workflow called: adw_id={adw_id}, "
+        f"pr_number={pr_number}, repo={repo_full_name}, "
+        f"model={model}, working_dir={working_dir}"
+    )
+
+    # Create the template request
+    request = AgentTemplateRequest(
+        agent_name="reviewer",
+        slash_command="/review",
+        args=[],  # /review doesn't take arguments, it reviews current git diff
+        adw_id=adw_id,
+        model=model,
+        working_dir=working_dir,
+    )
+    logger.info(f"   Created AgentTemplateRequest: agent=reviewer, slash_command=/review")
+
+    try:
+        # Execute in thread pool to avoid blocking async event loop
+        logger.info(f"   Executing template in thread pool...")
+        loop = asyncio.get_event_loop()
+        response: AgentPromptResponse = await loop.run_in_executor(
+            None,
+            execute_template,
+            request
+        )
+        logger.info(f"   ✓ Template execution completed: success={response.success}, session_id={response.session_id}")
+
+        # Determine output directory
+        output_dir = os.path.join(working_dir, "agents", adw_id, "reviewer")
+
+        # Future enhancement: Screenshot handling
+        # Screenshots should be saved to: agents/{adw_id}/reviewer/screenshots/
+        # The /review workflow can capture screenshots for UI changes
+        # These could be uploaded to GitHub as PR comments or stored in issues
+        # For now, we just log if screenshots directory exists
+        screenshots_dir = os.path.join(output_dir, "screenshots")
+        if os.path.exists(screenshots_dir):
+            screenshot_files = [f for f in os.listdir(screenshots_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+            if screenshot_files:
+                logger.info(f"Found {len(screenshot_files)} screenshots in {screenshots_dir}")
+                # Future: Upload these to GitHub or include in review comment
+
+        return WorkflowResult(
+            success=response.success,
+            output=response.output,
+            session_id=response.session_id,
+            adw_id=adw_id,
+            output_dir=output_dir,
+            plan_path=None,
+            error_message=None if response.success else response.output,
+        )
+
+    except Exception as e:
+        logger.error(f"Error executing /review workflow: {e}", exc_info=True)
+        return WorkflowResult(
+            success=False,
+            output="",
+            session_id=None,
+            adw_id=adw_id,
+            output_dir=os.path.join(working_dir, "agents", adw_id, "reviewer"),
+            plan_path=None,
+            error_message=f"Workflow execution error: {str(e)}",
+        )
+
+
 def generate_adw_id() -> str:
     """Generate a unique ADW identifier.
 

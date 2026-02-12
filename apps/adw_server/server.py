@@ -307,6 +307,7 @@ async def process_github_webhook(request: Request):
             # Parse and handle pull request event
             try:
                 pr_payload = PullRequestWebhookPayload(**payload)
+                logger.info(f"✓ Parsed PR webhook: pr=#{pr_payload.number}, action={pr_payload.action}")
             except ValidationError as e:
                 logger.error(f"Failed to parse PR payload: {e}")
                 raise HTTPException(
@@ -314,11 +315,13 @@ async def process_github_webhook(request: Request):
                     detail=f"Invalid PR payload: {e}"
                 )
 
+            logger.info(f"→ Calling handle_pull_request_event for PR #{pr_payload.number}")
             result = await handle_pull_request_event(
                 payload=pr_payload,
                 working_dir=config.adw_working_dir,
                 model=config.adw_default_model,
             )
+            logger.info(f"✓ handle_pull_request_event completed: workflow_triggered={result.get('workflow_triggered')}, adw_id={result.get('adw_id')}")
 
             return JSONResponse(content=result)
 
