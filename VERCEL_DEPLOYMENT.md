@@ -41,8 +41,12 @@ In the Vercel project settings, add the following environment variables:
 #### Optional Variables
 
 - **ADW_WORKING_DIR**: Working directory for ADW operations
-  - Default: `/tmp` (recommended for Vercel)
-  - Note: Vercel's filesystem is ephemeral
+  - Default: `/tmp` (required for Vercel - set in vercel.json)
+  - Note: Vercel's filesystem is ephemeral and only `/tmp` is writable
+
+- **STATIC_FILES_DIR**: Directory for static frontend files
+  - Default: `/tmp/static` (set in vercel.json for Vercel)
+  - Note: In serverless environments, this is optional as static files may not be served
 
 - **SERVER_HOST**: Server host
   - Default: `0.0.0.0`
@@ -51,7 +55,7 @@ In the Vercel project settings, add the following environment variables:
   - Default: `8000`
 
 - **ENVIRONMENT**: Deployment environment
-  - Default: `production`
+  - Default: `production` (set in vercel.json)
   - Options: `development`, `production`
 
 - **LOG_LEVEL**: Logging level
@@ -59,11 +63,11 @@ In the Vercel project settings, add the following environment variables:
   - Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
 - **CORS_ENABLED**: Enable CORS
-  - Default: `false`
-  - Set to `true` if needed for cross-origin requests
+  - Default: `true`
+  - Set to `false` if CORS is not needed
 
 - **CORS_ORIGINS**: Allowed CORS origins (comma-separated)
-  - Default: `http://localhost:3000,http://localhost:5173`
+  - Default: `["*"]`
   - Example: `https://yourapp.com,https://www.yourapp.com`
 
 ### 3. Deploy
@@ -165,12 +169,19 @@ For long-running ADW workflows, consider:
 
 ## Troubleshooting
 
-### Import Errors
+### Import Errors (FIXED in Issue #56)
 
 If you see import errors in Vercel logs:
+- ✓ **Fixed**: Updated `api/index.py` to properly set up Python path for Vercel's environment
+- ✓ **Fixed**: Modified `config.py` validators to handle serverless environments (e.g., `/tmp` directory creation)
+- ✓ **Fixed**: Set required environment variables in `vercel.json` (`ADW_WORKING_DIR`, `STATIC_FILES_DIR`)
 - Verify all dependencies are in `requirements.txt`
-- Check that `api/index.py` correctly sets up the Python path
 - Ensure the project structure matches the import paths
+
+**Technical Details of Fixes:**
+- `api/index.py`: Improved path resolution to work in Vercel's serverless environment
+- `config.py`: Made directory validators serverless-aware - they now detect Vercel environment and handle missing directories gracefully
+- `vercel.json`: Added environment variables for serverless-specific paths (`/tmp` directory)
 
 ### Webhook Signature Validation Fails
 

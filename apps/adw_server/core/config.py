@@ -123,36 +123,80 @@ class ServerConfig(BaseSettings):
     @field_validator("adw_working_dir")
     @classmethod
     def validate_working_dir(cls, v: str) -> str:
-        """Validate that working directory exists."""
-        if not os.path.isdir(v):
-            raise ValueError(
-                f"ADW working directory does not exist: {v}. "
-                "Please provide a valid directory path."
-            )
-        return os.path.abspath(v)
+        """Validate that working directory exists or can be created.
+
+        In serverless environments (like Vercel), we may need to create
+        the directory at runtime since it doesn't exist at config load time.
+        """
+        abs_path = os.path.abspath(v)
+
+        # In production/serverless, try to create the directory if it doesn't exist
+        if not os.path.isdir(abs_path):
+            # Check if we're in a serverless environment (Vercel uses /tmp)
+            is_serverless = abs_path.startswith('/tmp') or os.environ.get('VERCEL') == '1'
+
+            if is_serverless:
+                # In serverless, just return the path - it will be created when needed
+                try:
+                    os.makedirs(abs_path, exist_ok=True)
+                except Exception:
+                    # If creation fails, just log and continue - directory might be created later
+                    pass
+                return abs_path
+            else:
+                # In non-serverless, require the directory to exist
+                raise ValueError(
+                    f"ADW working directory does not exist: {abs_path}. "
+                    "Please provide a valid directory path."
+                )
+
+        return abs_path
 
     @field_validator("static_files_dir")
     @classmethod
     def validate_static_dir(cls, v: str) -> str:
-        """Validate that static files directory exists."""
+        """Validate that static files directory exists or skip in serverless.
+
+        In serverless environments, static files may not be available or needed,
+        so we make this validation more lenient.
+        """
         # Convert to absolute path relative to working directory
         if not os.path.isabs(v):
             # Get the project root (parent of apps directory)
             current_file = os.path.abspath(__file__)
-            apps_dir = os.path.dirname(current_file)
+            # Navigate up from config.py -> core -> adw_server -> apps -> project_root
+            core_dir = os.path.dirname(current_file)
+            adw_server_dir = os.path.dirname(core_dir)
+            apps_dir = os.path.dirname(adw_server_dir)
             project_root = os.path.dirname(apps_dir)
             v = os.path.join(project_root, v)
 
-        if not os.path.isdir(v):
-            # Try to create it if it doesn't exist
-            try:
-                os.makedirs(v, exist_ok=True)
-            except Exception as e:
-                raise ValueError(
-                    f"Static files directory does not exist and could not be created: {v}. "
-                    f"Error: {e}"
-                )
-        return os.path.abspath(v)
+        abs_path = os.path.abspath(v)
+
+        # Check if we're in a serverless environment
+        is_serverless = abs_path.startswith('/tmp') or os.environ.get('VERCEL') == '1'
+
+        if not os.path.isdir(abs_path):
+            if is_serverless:
+                # In serverless, static files might not be available - that's OK
+                # Just create the directory if possible, but don't fail if we can't
+                try:
+                    os.makedirs(abs_path, exist_ok=True)
+                except Exception:
+                    # Ignore errors in serverless - static files may not be needed
+                    pass
+                return abs_path
+            else:
+                # In non-serverless, try to create it
+                try:
+                    os.makedirs(abs_path, exist_ok=True)
+                except Exception as e:
+                    raise ValueError(
+                        f"Static files directory does not exist and could not be created: {abs_path}. "
+                        f"Error: {e}"
+                    )
+
+        return abs_path
 
     @field_validator("log_level")
     @classmethod
