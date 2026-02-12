@@ -5,7 +5,9 @@ export const CONFIG = {
   detection: {
     noFaceTimeout: 3000, // milliseconds - time before triggering distraction when no face detected
     gazeAwayTimeout: 4000, // milliseconds - time before triggering distraction when looking away
-    headTurnThreshold: 30, // degrees - head turn angle threshold
+    headTurnThreshold: 30, // degrees - head turn (yaw) angle threshold for horizontal detection
+    headPitchThreshold: 15, // degrees - head pitch (down) angle threshold for vertical detection
+    verticalGazeThreshold: 0.2, // normalized - iris vertical position threshold for detecting looking down
     confidenceThreshold: 0.5, // minimum confidence for face detection
     detectionInterval: 200, // DEPRECATED - no longer used; detection now runs continuously via requestAnimationFrame
   },
