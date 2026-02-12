@@ -51,4 +51,32 @@ export const CONFIG = {
     statsKey: 'focus_keeper_stats',
     persistStats: true,
   },
+
+  // Eye tracking configuration
+  eyeTracking: {
+    enabled: true,
+    modelHyperparams: {
+      epochs: 20,
+      batchSizeRatio: 0.1, // 10% of training data
+      learningRate: 0.0005,
+      minBatchSize: 2,
+      maxBatchSize: 64,
+    },
+    calibration: {
+      targetSize: 40,
+      gridPoints: 9, // 3x3 grid
+      autoMoveDelay: 2000, // milliseconds between calibration points
+      minSamples: 20, // minimum samples needed before training
+    },
+    prediction: {
+      updateInterval: 100, // milliseconds - 10 FPS
+      confidenceThreshold: 0.7,
+    },
+    visualization: {
+      heatmapOpacity: 0.7,
+      colorScheme: 'hot', // hot, cool, rainbow
+      eyeCanvasWidth: 55,
+      eyeCanvasHeight: 25,
+    },
+  },
 };

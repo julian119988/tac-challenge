@@ -1,6 +1,11 @@
 import { CONFIG } from './config.js';
 import { FaceDetector } from './face-detection.js';
 import { AttentionPlayer } from './video-player.js';
+import { EyeTracker } from './eye-tracker.js';
+import { DatasetManager } from './dataset-manager.js';
+import { ModelTrainer } from './model-trainer.js';
+import { GazePredictor } from './gaze-predictor.js';
+import { UIController } from './ui-controller.js';
 
 /**
  * Camera Manager - handles getUserMedia and video streaming
@@ -302,6 +307,13 @@ class FocusKeeperApp {
     this.faceDetector = new FaceDetector();
     this.attentionPlayer = new AttentionPlayer();
 
+    // Eye tracking components (initialized if enabled)
+    this.eyeTracker = null;
+    this.datasetManager = null;
+    this.modelTrainer = null;
+    this.gazePredictor = null;
+    this.uiController = null;
+
     this.isRunning = false;
   }
 
@@ -354,6 +366,11 @@ class FocusKeeperApp {
         return;
       }
 
+      // Initialize eye tracking if enabled (before starting camera)
+      if (CONFIG.eyeTracking.enabled) {
+        await this.initializeEyeTracking();
+      }
+
       // Auto-start camera on page load
       this.updateStatus('loading', 'Requesting camera access...');
       await this.startCamera();
@@ -363,6 +380,53 @@ class FocusKeeperApp {
       console.error('Initialization error:', error);
       this.updateStatus('error', 'Error: ' + error.message);
       this.showError(error.message);
+    }
+  }
+
+  /**
+   * Initialize eye tracking components
+   */
+  async initializeEyeTracking() {
+    try {
+      console.log('Initializing eye tracking...');
+
+      // Get eye canvas
+      const eyesCanvas = document.getElementById('eyes');
+      const videoElement = this.cameraManager.getVideoElement();
+
+      if (!eyesCanvas) {
+        console.warn('Eye canvas not found - eye tracking disabled');
+        return;
+      }
+
+      console.log('Eye canvas found, video element:', videoElement);
+
+      // Initialize eye tracker
+      this.eyeTracker = new EyeTracker();
+      this.eyeTracker.initialize(eyesCanvas, videoElement);
+      console.log('Eye tracker initialized');
+
+      // Initialize dataset manager
+      this.datasetManager = new DatasetManager(this.eyeTracker);
+      console.log('Dataset manager initialized');
+
+      // Initialize model trainer
+      this.modelTrainer = new ModelTrainer(this.datasetManager);
+      console.log('Model trainer initialized');
+
+      // Initialize gaze predictor
+      this.gazePredictor = new GazePredictor(this.modelTrainer, this.datasetManager);
+      console.log('Gaze predictor initialized');
+
+      // Initialize UI controller
+      this.uiController = new UIController();
+      this.uiController.initialize(this.datasetManager, this.modelTrainer, this.gazePredictor);
+      console.log('UI controller initialized');
+
+      console.log('✓ Eye tracking fully initialized');
+    } catch (error) {
+      console.error('✗ Failed to initialize eye tracking:', error);
+      console.error('Stack trace:', error.stack);
     }
   }
 
@@ -381,6 +445,11 @@ class FocusKeeperApp {
       // Update UI
       this.isRunning = true;
       this.updateStatus('focused', 'Camera active - Face detection running');
+
+      // Notify UI controller that webcam is enabled
+      if (this.uiController) {
+        this.uiController.onWebcamEnabled();
+      }
 
       console.log('Camera started and face detection active');
     } catch (error) {
@@ -403,9 +472,37 @@ class FocusKeeperApp {
         // Perform face detection
         const detection = await this.faceDetector.detect(videoElement);
 
+        // Debug: Log detection results occasionally (every 60 frames ~1 second)
+        if (Math.random() < 0.016) {
+          console.log('Detection result:', {
+            faceDetected: detection?.faceDetected,
+            hasKeypoints: !!detection?.keypoints,
+            uiControllerExists: !!this.uiController
+          });
+        }
+
         // Pass detection results to camera manager for visualization
         if (this.cameraManager) {
           this.cameraManager.updateDetection(detection);
+        }
+
+        // Update UI controller based on face detection (always, regardless of eye tracking)
+        if (this.uiController) {
+          if (detection && detection.faceDetected) {
+            this.uiController.onFoundFace();
+          } else {
+            this.uiController.onFaceNotFound();
+          }
+        } else {
+          // UI controller doesn't exist - this is the problem!
+          if (Math.random() < 0.016) {
+            console.warn('UI controller not initialized - buttons will not enable');
+          }
+        }
+
+        // Update eye tracker if enabled and detection successful
+        if (this.eyeTracker && detection && detection.keypoints) {
+          this.eyeTracker.updateFromDetection(detection);
         }
       } catch (error) {
         console.error('Detection error:', error);

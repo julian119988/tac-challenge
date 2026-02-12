@@ -6,10 +6,15 @@
   <title>Focus Keeper - Anti-Procrastination App</title>
   <link rel="stylesheet" href="styles.css">
 
-  <!-- TensorFlow.js and Face Landmarks Detection -->
+  <!-- TensorFlow.js - keep original working setup -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+
+  <!-- TensorFlow.js layers for ML model training -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-layers"></script>
+
+  <!-- Face Landmarks Detection -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
 </head>
@@ -36,6 +41,60 @@
 
       <!-- Error Display -->
       <div id="error-message" class="error-message hidden"></div>
+
+      <!-- Eye Tracking Training Panel -->
+      <div id="training-phase" class="eye-tracking-panel">
+        <h3>Eye Tracking Training</h3>
+        <div class="training-status">
+          <div class="status-row">
+            <span>Webcam:</span>
+            <span data-status="webcam">Disconnected</span>
+          </div>
+          <div class="status-row">
+            <span>Face Detected:</span>
+            <span data-status="face">No</span>
+          </div>
+          <div class="status-row">
+            <span>Training Samples:</span>
+            <span data-count="train">0</span>
+          </div>
+          <div class="status-row">
+            <span>Validation Samples:</span>
+            <span data-count="val">0</span>
+          </div>
+          <div class="status-row">
+            <span>Total Samples:</span>
+            <span data-count="total">0</span>
+          </div>
+        </div>
+        <div class="button-group">
+          <button id="start-calibration" disabled>Start Calibration</button>
+          <button id="start-training" disabled>Train Model</button>
+          <button id="reset-model" disabled>Reset Model</button>
+          <button id="start-session" disabled>Start Session</button>
+        </div>
+        <p class="instruction">1. Click "Start Calibration" to collect training data. 2. Click "Train Model" to train. 3. Click "Start Session" when ready.</p>
+      </div>
+
+      <!-- Eye Tracking Session Panel -->
+      <div id="session-phase" class="eye-tracking-panel hidden">
+        <h3>Gaze Tracking Session</h3>
+        <div class="button-group">
+          <button id="start-tracking">Start Tracking</button>
+          <button id="stop-tracking" disabled>Stop Tracking</button>
+          <button id="draw-heatmap" disabled>Show Heatmap</button>
+        </div>
+        <p class="instruction">Start tracking to see real-time gaze prediction. Stop tracking to view the heatmap.</p>
+      </div>
+
+      <!-- Eye Tracking Heatmap Panel -->
+      <div id="heatmap-phase" class="eye-tracking-panel hidden">
+        <h3>Gaze Heatmap</h3>
+        <div class="button-group">
+          <button id="new-session">New Session</button>
+          <button id="retrain-model">Retrain Model</button>
+        </div>
+      </div>
     </main>
 
     <!-- Footer -->
@@ -58,11 +117,28 @@
     </footer>
   </div>
 
+  <!-- Hidden canvases for eye tracking -->
+  <canvas id="eyes" width="55" height="25" style="display: none;"></canvas>
+  <canvas id="heatMap" class="heatmap-canvas"></canvas>
+
+  <!-- Calibration target -->
+  <div id="calibration-target" class="calibration-target"></div>
+
+  <!-- Training progress overlay -->
+  <div id="training-progress" class="training-progress" style="display: none;"></div>
+
   <!-- Intervention Video Container (created dynamically by video-player.js) -->
 
   <!-- Load app modules -->
   <script type="module" src="config.js"></script>
+  <script type="module" src="utils.js"></script>
   <script type="module" src="face-detection.js"></script>
+  <script type="module" src="eye-tracker.js"></script>
+  <script type="module" src="dataset-manager.js"></script>
+  <script type="module" src="model-trainer.js"></script>
+  <script type="module" src="gaze-predictor.js"></script>
+  <script type="module" src="ui-controller.js"></script>
+  <script type="module" src="heatmap-viz.js"></script>
   <script type="module" src="video-player.js"></script>
   <script type="module" src="app.js"></script>
 </body>

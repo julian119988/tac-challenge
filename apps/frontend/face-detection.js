@@ -17,9 +17,10 @@ export class FaceDetector {
       // Load face-landmarks-detection model
       const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
       const detectorConfig = {
-        runtime: 'tfjs',
+        runtime: 'mediapipe', // Use MediaPipe runtime instead of tfjs
         maxFaces: 1,
-        refineLandmarks: true,
+        refineLandmarks: true, // Enable iris landmarks (indices 468-477)
+        solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
       };
 
       this.model = await faceLandmarksDetection.createDetector(model, detectorConfig);
@@ -39,6 +40,19 @@ export class FaceDetector {
    */
   async detect(video) {
     if (!this.isModelLoaded || !this.model) {
+      console.warn('Model not loaded');
+      return {
+        faceDetected: false,
+        lookingAtScreen: false,
+        confidence: 0,
+      };
+    }
+
+    // Check video readiness
+    if (!video || video.readyState < 2) {
+      if (Math.random() < 0.01) {
+        console.warn('Video not ready:', video?.readyState);
+      }
       return {
         faceDetected: false,
         lookingAtScreen: false,
@@ -52,6 +66,9 @@ export class FaceDetector {
       });
 
       if (faces.length === 0) {
+        if (Math.random() < 0.02) {
+          console.log('No faces detected in frame');
+        }
         return {
           faceDetected: false,
           lookingAtScreen: false,
@@ -60,6 +77,11 @@ export class FaceDetector {
       }
 
       const face = faces[0];
+
+      // Log face detection success occasionally
+      if (Math.random() < 0.02) {
+        console.log('Face detected! Keypoints:', face.keypoints?.length);
+      }
 
       // Calculate gaze direction using eye landmarks and head pose
       const gazeInfo = this.calculateGazeDirection(face);
@@ -114,6 +136,7 @@ export class FaceDetector {
       };
     } catch (error) {
       console.error('Face detection error:', error);
+      console.error('Error details:', error.message, error.stack);
       return {
         faceDetected: false,
         lookingAtScreen: false,
@@ -131,35 +154,50 @@ export class FaceDetector {
     try {
       const keypoints = face.keypoints;
 
-      // Get eye landmarks
-      // MediaPipe Face Mesh indices for eyes
+      // Get iris landmarks (enabled with refineLandmarks: true)
+      const LEFT_IRIS = [468, 469, 470, 471, 472];
+      const RIGHT_IRIS = [473, 474, 475, 476, 477];
+
+      // Calculate iris centers (more accurate than eye corners)
+      const leftIris = LEFT_IRIS.map(idx => keypoints[idx]);
+      const rightIris = RIGHT_IRIS.map(idx => keypoints[idx]);
+
+      const leftIrisCenter = this.getCenter(leftIris);
+      const rightIrisCenter = this.getCenter(rightIris);
+
+      // Get eye landmarks for additional context
       const leftEyeIndices = [33, 133, 160, 159, 158, 157, 173];
       const rightEyeIndices = [362, 263, 385, 386, 387, 388, 398];
 
       const leftEye = leftEyeIndices.map(idx => keypoints[idx]);
       const rightEye = rightEyeIndices.map(idx => keypoints[idx]);
 
-      // Calculate eye center points
       const leftEyeCenter = this.getCenter(leftEye);
       const rightEyeCenter = this.getCenter(rightEye);
 
       // Simple heuristic: if eyes are relatively centered in detected region,
       // user is likely looking forward
-      const eyeCenterX = (leftEyeCenter.x + rightEyeCenter.x) / 2;
+      const eyeCenterX = (leftIrisCenter.x + rightIrisCenter.x) / 2;
       const faceCenterX = (keypoints[234].x + keypoints[454].x) / 2; // face outline points
 
       const horizontalDeviation = Math.abs(eyeCenterX - faceCenterX);
       const isLookingForward = horizontalDeviation < 30; // threshold for looking forward
 
-      // Debug logging
-      console.log('[Gaze] Horizontal deviation:', horizontalDeviation.toFixed(2),
-                  '| Looking forward:', isLookingForward,
-                  '| Confidence: 0.8');
+      // Debug logging (reduced frequency)
+      if (Math.random() < 0.05) {
+        console.log('[Gaze] Horizontal deviation:', horizontalDeviation.toFixed(2),
+                    '| Looking forward:', isLookingForward,
+                    '| Confidence: 0.8');
+      }
 
       return {
         isLookingForward,
         confidence: 0.8, // placeholder confidence
         horizontalDeviation,
+        leftIrisCenter,
+        rightIrisCenter,
+        leftIris,
+        rightIris,
       };
     } catch (error) {
       console.error('Gaze calculation error:', error);

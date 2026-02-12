@@ -261,3 +261,193 @@ footer p {
     font-size: 1.5rem;
   }
 }
+
+/* Eye Tracking UI Styles */
+
+/* Eye Tracking Panel */
+.eye-tracking-panel {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.eye-tracking-panel h3 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.eye-tracking-panel.hidden {
+  display: none;
+}
+
+/* Training Status */
+.training-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.status-row span:first-child {
+  font-weight: 600;
+}
+
+.status-detected {
+  color: #4ade80;
+}
+
+.status-connected {
+  color: #4ade80;
+}
+
+/* Button Group */
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.button-group button {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.button-group button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.button-group button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.button-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.instruction {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Calibration Target */
+.calibration-target {
+  display: none;
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,166,108,1) 0%, rgba(242,113,33,1) 70%);
+  border: 3px solid white;
+  box-shadow: 0 0 20px rgba(242,113,33,0.8), 0 4px 6px rgba(0,0,0,0.3);
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  animation: calibration-pulse 1s infinite;
+  pointer-events: none;
+}
+
+@keyframes calibration-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* Heatmap Canvas */
+.heatmap-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Training Progress Overlay */
+.training-progress {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: #333;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  text-align: center;
+  width: 350px;
+  max-width: 90vw;
+}
+
+.training-progress div {
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  background: #f0f0f0;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 15px 0;
+}
+
+.progress-fill {
+  background: linear-gradient(135deg, #f9a66c, #f27121);
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .eye-tracking-panel {
+    padding: 15px;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group button {
+    width: 100%;
+  }
+
+  .training-progress {
+    width: 90vw;
+    padding: 15px;
+  }
+}
